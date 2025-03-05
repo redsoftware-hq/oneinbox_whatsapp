@@ -106,27 +106,6 @@ def get_lead_from_number(number):
 
     return None, None
 
-@frappe.whitelist(allow_guest=True)
-def check_for_existance_as_lead(phone):
-    formatted_mobile_number = parse_mobile_no(phone)
-    lead = frappe.get_all("Lead", filters={"contact_number": formatted_mobile_number})
-    contact = frappe.get_all("Contacts", filters={"contact_number": formatted_mobile_number})
-    alternate_contact = frappe.get_all("Contacts", filters={"alternative_number": formatted_mobile_number})
-    
-    return not (lead or contact or alternate_contact)
-
-
-@frappe.whitelist(allow_guest=True)
-def get_whatsapp_contact():
-    whatsapp_contacts = frappe.get_all("WhatsApp Contact", fields=["phone","whatsapp_name","unread_message_count","last_message_time","discard","is_lead","marketing_opt_in"])
-    
-    filtered_contacts = [
-        contact for contact in whatsapp_contacts 
-        if not check_for_existance_as_lead(contact.get("phone"))
-    ]
-    
-    return whatsapp_contacts 
-
 
 def parse_mobile_no(mobile_no: str):
     """Parse mobile number to remove spaces, brackets, etc.
@@ -372,5 +351,61 @@ def get_from_name(message):
         from_name = doc.get("first_name", "Anonymous User") + " " + doc.get("last_name", "")
     return from_name
 
+
+
+@frappe.whitelist(allow_guest=True)
+def check_for_existance_as_lead(contact_number):
+    formatted_mobile_number = parse_mobile_no(contact_number)
+    lead = frappe.get_all("Lead", filters={"contact_number": formatted_mobile_number})
+    contact = frappe.get_all("Contacts", filters={"contact_number": formatted_mobile_number})
+    alternate_contact = frappe.get_all("Contacts", filters={"alternative_number": formatted_mobile_number})
+    if lead or contact or alternate_contact:
+       return  True
+    return False
+
+
+@frappe.whitelist(allow_guest=True)
+def get_whatsapp_contact():
+    whatsapp_contacts = frappe.get_all("WhatsApp Contact", fields=["phone",
+                                                                   "whatsapp_name",
+                                                                   "unread_message_count",
+                                                                   "last_message_time",
+                                                                   "discard","is_lead",
+                                                                   "marketing_opt_in"],filters={"is_lead":0})
+    
+
+    
+    return whatsapp_contacts
+
+@frappe.whitelist(allow_guest=True)
+def save_as_lead(data, doctype):
+    if isinstance(data, str):
+        import json
+        data = json.loads(data)  # Ensure data is a dictionary
+    
+    mobile_number = check_for_existance_as_lead(data.get("contact_number"))
+    if mobile_number:
+        frappe.throw(_("Phone number is already available"))
+
+    if isinstance(data.get("executive"), dict):
+        data["executive"] = data["executive"].get("value")
+
+    if isinstance(data.get("center"), dict):
+        data["center"] = data["center"].get("value")
+        
+    if isinstance(data.get("source"), dict):
+        data["source"] = data["source"].get("value")
+
+    doc = frappe.get_doc({"doctype": doctype, **data})
+    doc.insert(ignore_permissions=True)
+
+    # Update Whatsapp User if they exist
+    whatsapp_contact = frappe.get_all("Whatsapp User", filters={"phone": data.get("contact_number")}, limit=1)
+    if whatsapp_contact:
+        whatsapp_user = frappe.get_doc("Whatsapp User", whatsapp_contact[0].name)
+        whatsapp_user.is_a_lead = 1
+        whatsapp_user.save(ignore_permissions=True)
+
+    return {"message": "Lead saved successfully"}
 
     

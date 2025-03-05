@@ -37,11 +37,9 @@ function lead_map_field(frm) {
             field_map[f.fieldname] = f.fieldtype;
         });
 
-        // Get required and optional fields
         let required_fields = meta.fields.filter(f => f.reqd === 1).map(f => f.fieldname);
         let optional_fields = meta.fields.filter(f => f.reqd !== 1).map(f => f.fieldname);
 
-        // Always include "executive" in required fields
         if (!required_fields.includes("executive")) {
             required_fields.push("executive");
             field_map["executive"] = "Link";

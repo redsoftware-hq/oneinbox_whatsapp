@@ -179,12 +179,11 @@ onBeforeUnmount(() => {
       />
 
       <WhatappAddToLeadModal 
-        v-model="showAddLeadModal" 
-        :leadData="{
-        first_name: selectedPhone.name || '',
-        contact_number: selectedPhone.number|| ''
-        }" 
-        />
+      v-model="showAddLeadModal" 
+      :first_name="selectedPhone.name || ''"
+      :contact_number="selectedPhone.number || ''"
+      />
+
 
     </div>
   </div>

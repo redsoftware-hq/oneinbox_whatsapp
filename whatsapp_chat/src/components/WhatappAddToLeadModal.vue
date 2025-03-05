@@ -8,21 +8,23 @@
           class="p-2"
           :class="{ 'overflow-y-auto max-h-96': dynamicFields.length > 8 }"
         >
-          <FormControl
-            :type="mapInputType(field.doctype_field_type)"
-            :size="'sm'"
-            :variant="'subtle'"
-            :placeholder="field.lead_field_value"
-            :label="formatLabel(field.lead_field_value)"
-            v-model="lead[field.lead_field_value]"
-            :options="getOptions(field)"
-            :as="mapInputType(field.doctype_field_type) === 'autocomplete' ? 'autocomplete' : null"
-          />
-        </div>
+        <FormControl
+                :type="mapInputType(field.doctype_field_type, field.lead_field_value)"
+                :size="'sm'"
+                :variant="'subtle'"
+                :placeholder="field.lead_field_value"
+                :label="formatLabel(field.lead_field_value)"
+                v-model="lead[field.lead_field_value]"
+                :options="getOptions(field)"
+                :as="mapInputType(field.doctype_field_type, field.lead_field_value) === 'autocomplete' ? 'autocomplete' : null"
+                />
 
+        </div>
         <div class="mt-4 flex justify-end text-black">
-          <Button label="Cancel" class="mr-2" />
-          <Button variant="solid" theme="gray" size="sm" label="Save Lead" type="submit" />
+          <div class="mt-4 flex justify-end text-black">
+  <Button label="Cancel" class="mr-2" type="button" @click="show = false" />
+  <Button variant="solid" theme="gray" size="sm" label="Save Lead" @click="submitLead" />
+</div>
         </div>
       </form>
     </template>
@@ -30,8 +32,14 @@
 </template>
 
 <script setup>
-import { ref, watchEffect } from "vue";
+import { ref, watchEffect, defineProps } from "vue";
 import { Button, FormControl, createResource } from "frappe-ui";
+import { toRaw } from "vue";
+
+const props = defineProps({
+  contact_number: String,
+  first_name: String,
+});
 
 const show = ref(false);
 const responseMessage = ref("");
@@ -54,8 +62,6 @@ const form_name = ref("");
 
 watchEffect(() => {
   if (formDataResource.data?.message) {
-    console.log("Form Data:", formDataResource.data.message);
-
     executiveOptions.value =
       formDataResource.data.message.executive?.map((exec) => ({
         label: exec.fullname,
@@ -74,26 +80,34 @@ watchEffect(() => {
   if (fieldMappingsResource.data?.field_mappings) {
     dynamicFields.value = fieldMappingsResource.data.field_mappings;
     form_name.value = fieldMappingsResource.data.mappings.lead_reference_doctype;
-
+    
     lead.value = dynamicFields.value.reduce((acc, field) => {
       acc[field.lead_field_value] = field.lead_field_value === "source" ? "Whatsapp" : "";
       return acc;
     }, {});
+
+    
+    lead.value.contact_number = props.contact_number || "Dummy";
+    lead.value.first_name = props.first_name || "123456";
+    lead.value.created_on = new Date().toISOString().split('T')[0];
   }
 });
 
+const mapInputType = (doctypeFieldType, leadFieldValue) => {
+  if (leadFieldValue === "created_on") {
+    return "text"; // Explicitly setting 'created_on' as text
+  }
 
-const mapInputType = (doctypeFieldType) => {
   const typeMap = {
     Data: "text",
     Phone: "tel",
-    Date: "date",
-    Select: "autocomplete", 
+    Date: "text",
+    Select: "autocomplete",
     Link: "autocomplete",
   };
+  
   return typeMap[doctypeFieldType] || "text";
 };
-
 const formatLabel = (key) => {
   return key.replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase());
 };
@@ -107,8 +121,26 @@ const getOptions = (field) => {
   return [];
 };
 
-// Submit lead form
-const submitLead = () => {
-  console.log("Submitting Lead:", lead.value);
+const submitLead = async () => {
+  const leadData = JSON.parse(JSON.stringify(toRaw(lead.value)));
+  const doctype=JSON.parse(JSON.stringify(toRaw(form_name.value)))
+  try {
+    const response = await fetch("/api/method/frappe_whatsapp.api.whatsapp.save_as_lead", {
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
+      },
+      method: "POST",
+      body: JSON.stringify({
+        doctype: doctype,
+        data: leadData,
+      }),
+    });
+
+    const result = await response.json();
+    console.log("Lead Submitted:", result);
+  } catch (error) {
+    console.error("Error submitting lead:", error);
+  }
 };
 </script>

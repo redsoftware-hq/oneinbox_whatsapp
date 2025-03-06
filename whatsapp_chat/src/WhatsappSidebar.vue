@@ -1,25 +1,25 @@
 <template>
-  <div class="h-screen w-80 bg-white shadow-md flex flex-col border-r border-gray-300">
-    <div class="p-4 flex justify-between items-center border-b border-gray-300 bg-gray-100">
-      <button @click="$router.go(-1)" class="text-3xl font-bold">←</button>
+  <div class="h-4/5 w-100 bg-white  flex flex-col border-r border-gray-100 ">
+    <div class="p-4 flex justify-between items-center border-b  bg-gray-100 bg-white">
+      
       <h2 class="text-lg font-semibold text-gray-700">Contacts</h2>
     </div>
 
-    <div class="p-2 bg-gray-100">
+    <div class="p-2">
       <input
         v-model="search"
         type="text"
         placeholder="Search contacts..."
-        class="w-full p-2 rounded-md border border-gray-300 focus:outline-none focus:ring focus:ring-blue-300"
+        class="w-full p-2 rounded-md border border-gray-300 focus:outline-none focus:ring focus:ring-blue-300 bg-gray-100"
       />
     </div>
 
-    <div class="flex-1 overflow-y-auto bg-gray-100">
+    <div class="flex-1 overflow-y-auto bg-white">
       <ul v-if="filteredContacts.length">
         <li
           v-for="contact in filteredContacts"
           :key="contact.phone"
-          class="flex items-center justify-between p-3 cursor-pointer transition duration-200 hover:bg-gray-300 border-b border-gray-300 bg-gray-100"
+          class="flex items-center justify-between p-4 cursor-pointer transition-duration-200 hover:bg-gray-100 border-b border-gray-300 bg-white w-full"
           :class="{ 'bg-blue-100': selectedContact === contact.phone }"
           @click="selectContact(contact)"
         >
@@ -37,8 +37,8 @@
             </div>
 
             <div class="flex justify-between w-full">
-              <div class="text-sm font-medium text-gray-800">{{ contact.whatsapp_name || "Unknown" }}</div>
-              <div class="text-sm font-medium text-gray-400">{{ formatDate(contact.last_message_time) }}</div>
+              <div class="text-sm text-gray-800">{{ contact.whatsapp_name || "" }}</div>
+              <div class="text-sm font-medium text-gray-400">{{ formatDate(contact.last_message_time) || "" }}</div>
             </div>
           </div>
         </li>
@@ -52,6 +52,9 @@
 
 <script>
 import { Badge, createResource } from "frappe-ui";
+import { format, isToday, isYesterday } from "date-fns";
+
+
 
 export default {
   name: "WhatsappSidebar",
@@ -84,9 +87,21 @@ export default {
       this.$emit("contact-selected", { number: contact.phone, name: contact.whatsapp_name });
     },
     formatDate(dateString) {
-      if (!dateString) return "N/A";
-      const date = new Date(dateString);
-      return date.toLocaleDateString();
+      const lastInteraction = new Date(dateString);
+      let formattedTime=""
+      const currentYear = new Date().getFullYear();
+      const messageYear = lastInteraction.getFullYear();
+
+if (isToday(lastInteraction)) {
+    formattedTime = format(lastInteraction, "hh:mm a");
+  } else if (isYesterday(lastInteraction)) {
+    formattedTime = "Yesterday";
+  } else if (currentYear === messageYear) {
+    formattedTime = format(lastInteraction, "dd MMM");
+  } else {
+    formattedTime = format(lastInteraction, "dd/MM/yy");
+  }
+  return formattedTime
     },
   },
 };

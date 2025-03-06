@@ -95,16 +95,26 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="flex h-full">
+    <div class="flex h-4/5 flex-col overflow-hidden">
+    <div class="top-bar flex  p-3 bg-white"  >
+        <div class="flex column gap-5 w-full">
+          <button class="text-2xl" @click="window.history.back()">←</button>
+         <div class="flex gap-2 items-center">
+           <WhatsAppIcon class="h-8 w-8 text-gray-500" />
+           <h1>Whatsapp</h1>
+         </div>
+        </div>
+      </div>
+    <div class="flex h-screen overflow-hidden" >
     <div class="w-1/5">
       <WhatsappSidebar @contact-selected="updatePhoneNumber" />
     </div>
-
-    <div class="whatsapp-chat-container w-full flex-col">
-      <div class="top-bar flex items-center justify-between p-3 bg-white shadow">
+    
+    <div class="whatsapp-chat-container h-screen w-full flex-col" >
+      <div class="top-bar flex items-center justify-between p-2 bg-white" v-if="selectedPhone" >
         <div class="flex flex-col">
           <h2 class="text-xl font-semibold text-gray-800">{{ selectedPhone.number || '' }}</h2>
-          <h2 class="text-md font-semibold text-gray-800">{{ selectedPhone.name || '' }}</h2>
+          <h2 class="text-sm font-semibold text-gray-800">{{ selectedPhone.name || '' }}</h2>
         </div>
         <div class="flex items-center space-x-4">
           <Button
@@ -159,7 +169,7 @@ onBeforeUnmount(() => {
 </div>
 
 
-      <div class="chat-box-container border-t">
+      <div class="chat-box-container border-t-gray-100 mb-4">
         <WhatsAppBox
           ref="whatsappBox"
           v-model:doc="props.document"
@@ -168,6 +178,7 @@ onBeforeUnmount(() => {
           :docname="props.docname"
           :phone="props.phone"
           @message-sent="whatsappMessages.reload"
+          v-if="selectedPhone"
         />
       </div>
 
@@ -187,13 +198,14 @@ onBeforeUnmount(() => {
 
     </div>
   </div>
+</div>
 </template>
 
 <style>
 .whatsapp-chat-container {
   display: flex;
   flex-direction: column;
-  height: calc(100vh);
+  height: calc(95vh);
   max-height: 100%;
   background-color: #f0f2f5;
 }
@@ -217,6 +229,14 @@ onBeforeUnmount(() => {
 }
 
 .messages-container {
-  overflow-y: auto;
+  overflow-y: hidden;
+}
+.chat-box-container{
+  margin-bottom:2rem;
+  padding:3rem
+
+}
+*{
+  overflow: hidden;
 }
 </style>

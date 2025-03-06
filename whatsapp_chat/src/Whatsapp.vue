@@ -36,7 +36,7 @@ function sendTemplate(template) {
   showWhatsappTemplates.value = false;
   try {
     createResource({
-      url: "",
+      url: "frappe_whatsapp.api.whatsapp.send_whatsapp_template",
       params: {
         reference_doctype: props.doctype,
         reference_name: props.docname,
@@ -133,18 +133,11 @@ onBeforeUnmount(() => {
           </button>
           
           <Button
-              :variant="'subtle'"
-              :ref_for="true"
-              theme="gray"
-              size="sm"
-              label="Button"
-              :loading="false"
-              :loadingText="null"
-              :disabled="false"
-              :link="null"
-              >
-            Send Template
-          </Button>
+        label="Send Template"
+        class="send-template-btn text-lg"
+        @click="showWhatsappTemplates = true"
+      />
+
         </div>
       </div>
       
@@ -183,7 +176,6 @@ onBeforeUnmount(() => {
       </div>
 
       <WhatsappTemplateSelectorModal
-        v-if="whatsappEnabled"
         v-model="showWhatsappTemplates"
         :doctype="doctype"
         @send="(t) => sendTemplate(t)"

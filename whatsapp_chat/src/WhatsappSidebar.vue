@@ -1,7 +1,6 @@
 <template>
-  <div class="h-4/5 w-100 bg-white  flex flex-col border-r border-gray-100 ">
-    <div class="p-4 flex justify-between items-center border-b  bg-gray-100 bg-white">
-      
+  <div class="h-4/5 w-100 bg-white flex flex-col border-r border-gray-100">
+    <div class="p-4 flex justify-between items-center border-b bg-gray-100 bg-white">
       <h2 class="text-lg font-semibold text-gray-700">Contacts</h2>
     </div>
 
@@ -53,7 +52,7 @@
 <script>
 import { Badge, createResource } from "frappe-ui";
 import { format, isToday, isYesterday } from "date-fns";
-
+import debounce from 'debounce';
 
 
 export default {
@@ -65,21 +64,25 @@ export default {
     };
   },
   setup() {
+    // Fetch all contacts initially
     const contacts = createResource({
       url: "/api/method/frappe_whatsapp.api.whatsapp.get_whatsapp_contact",
       auto: true,
     });
-
     return { contacts };
   },
   computed: {
     filteredContacts() {
-      return (this.contacts.data || []).filter(
-        (contact) =>
-          contact.phone.toLowerCase().includes(this.search.toLowerCase()) ||
-          (contact.whatsapp_name || "").toLowerCase().includes(this.search.toLowerCase())
+      if (!this.search) return this.contacts.data || [];
+      return (this.contacts.data || []).filter(contact =>
+        contact.phone.includes(this.search) || (contact.whatsapp_name || "").toLowerCase().includes(this.search.toLowerCase())
       );
     },
+  },
+  watch: {
+    search: debounce(function (newVal) {
+      this.search = newVal;
+    }, 300),
   },
   methods: {
     selectContact(contact) {
@@ -88,27 +91,26 @@ export default {
     },
     formatDate(dateString) {
       const lastInteraction = new Date(dateString);
-      let formattedTime=""
+      let formattedTime = "";
       const currentYear = new Date().getFullYear();
       const messageYear = lastInteraction.getFullYear();
 
-if (isToday(lastInteraction)) {
-    formattedTime = format(lastInteraction, "hh:mm a");
-  } else if (isYesterday(lastInteraction)) {
-    formattedTime = "Yesterday";
-  } else if (currentYear === messageYear) {
-    formattedTime = format(lastInteraction, "dd MMM");
-  } else {
-    formattedTime = format(lastInteraction, "dd/MM/yy");
-  }
-  return formattedTime
+      if (isToday(lastInteraction)) {
+        formattedTime = format(lastInteraction, "hh:mm a");
+      } else if (isYesterday(lastInteraction)) {
+        formattedTime = "Yesterday";
+      } else if (currentYear === messageYear) {
+        formattedTime = format(lastInteraction, "dd MMM");
+      } else {
+        formattedTime = format(lastInteraction, "dd/MM/yy");
+      }
+      return formattedTime;
     },
   },
 };
 </script>
 
 <style scoped>
-/* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
 }
@@ -117,7 +119,6 @@ if (isToday(lastInteraction)) {
   border-radius: 10px;
 }
 
-/* Smooth transitions */
 li {
   transition: background-color 0.2s ease-in-out;
 }

@@ -32,6 +32,7 @@
 import { ref, watchEffect, defineProps } from "vue";
 import { Button, FormControl, createResource } from "frappe-ui";
 import { toRaw } from "vue";
+import { emitter } from "../utils/eventBus.js";
 
 const props = defineProps({
   contact_number: String,
@@ -148,6 +149,7 @@ const submitLead = async () => {
     });
 
     const result = await response.json();
+    emitter.emit("lead-saved");
     console.log("Lead Submitted:", result);
   } catch (error) {
     console.error("Error submitting lead:", error);

@@ -5,9 +5,9 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "postinstall": "cd oneinbox_whatsapp && yarn install",
-    "dev": "cd oneinbox_whatsapp && yarn dev",
-    "build": "cd oneinbox_whatsapp && yarn build"
+    "postinstall": "cd whatsapp_chat && yarn install",
+    "dev": "cd whatsapp_chat && yarn dev",
+    "build": "cd whatsapp_chat && yarn build"
   },
   "keywords": [],
   "author": "",

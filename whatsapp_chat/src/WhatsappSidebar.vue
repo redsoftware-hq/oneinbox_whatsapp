@@ -52,43 +52,76 @@
 <script>
 import { Badge, createResource } from "frappe-ui";
 import { format, isToday, isYesterday } from "date-fns";
-import debounce from 'debounce';
-
+import debounce from "debounce";
+import { emitter } from "./utils/eventBus.js";
 
 export default {
   name: "WhatsappSidebar",
+
+  created() {
+    emitter.on("lead-saved", () => {
+      this.fetchContacts();
+    });
+  },
+
+  beforeDestroy() {
+    emitter.off("lead-saved", this.fetchContacts);
+  },
+
   data() {
     return {
       search: "",
       selectedContact: null,
     };
   },
+
   setup() {
-    // Fetch all contacts initially
     const contacts = createResource({
       url: "/api/method/frappe_whatsapp.api.whatsapp.get_whatsapp_contact",
       auto: true,
     });
+
     return { contacts };
   },
+
   computed: {
     filteredContacts() {
       if (!this.search) return this.contacts.data || [];
-      return (this.contacts.data || []).filter(contact =>
-        contact.phone.includes(this.search) || (contact.whatsapp_name || "").toLowerCase().includes(this.search.toLowerCase())
+      return (this.contacts.data || []).filter(
+        (contact) =>
+          contact.phone.includes(this.search) ||
+          (contact.whatsapp_name || "")
+            .toLowerCase()
+            .includes(this.search.toLowerCase())
       );
     },
   },
+
   watch: {
     search: debounce(function (newVal) {
       this.search = newVal;
     }, 300),
   },
+
   methods: {
+    fetchContacts() {
+      window.location.reload();
+      this.contacts=this.Refetch();
+    },
+
     selectContact(contact) {
       this.selectedContact = contact.phone;
-      this.$emit("contact-selected", { number: contact.phone, name: contact.whatsapp_name });
+      this.$emit("contact-selected", {
+        number: contact.phone,
+        name: contact.whatsapp_name,
+      });
     },
+    Refetch() {
+    this.contacts = createResource({
+      url: "/api/method/frappe_whatsapp.api.whatsapp.get_whatsapp_contact",
+      auto: true,
+    });
+  },
     formatDate(dateString) {
       const lastInteraction = new Date(dateString);
       let formattedTime = "";
@@ -109,6 +142,7 @@ export default {
   },
 };
 </script>
+
 
 <style scoped>
 ::-webkit-scrollbar {

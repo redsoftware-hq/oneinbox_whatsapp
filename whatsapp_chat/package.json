@@ -4,8 +4,9 @@
   "description": "whatsapp chat",
   "scripts": {
     "dev": "vite",
-    "build": "vite build --base=/assets/oneleadwhatsapp/whatsapp_chat/",
-    "serve": "vite preview"
+    "build": "vite build --base=/assets/frappe_whatsapp/whatsapp_chat/ && yarn copy-html-entry",
+    "preview": "vite preview",
+    "copy-html-entry": "cp ../frappe_whatsapp/public/whatsapp_chat/index.html ../frappe_whatsapp/www/whatsapp_chat.html"
   },
   "dependencies": {
     "@tiptap/extension-paragraph": "^2.4.0",
@@ -17,6 +18,7 @@
     "frappe-ui": "^0.1.71",
     "gemoji": "^8.1.0",
     "mime": "^4.0.1",
+    "mitt": "^3.0.1",
     "nanoid": "^4.0.2",
     "rehype-raw": "^6.1.1",
     "remark-gfm": "^3.0.1",
@@ -24,7 +26,8 @@
     "vite-plugin-inspect": "^10.1.0",
     "vue": "^3.4.12",
     "vue-demi": "^0.14.10",
-    "vue-router": "^4.2.2"
+    "vue-router": "^4.2.2",
+    "vue-toastification": "^1.7.14"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^4.2.3",

@@ -26,6 +26,7 @@ const props = defineProps({
 const selectedPhone = ref('');
 const showWhatsappTemplates = ref(false);
 const showAddLeadModal = ref(false);
+const isLoading =ref(true)
 
 
 function updatePhoneNumber(newPhone, newName) {
@@ -95,10 +96,10 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-    <div class="flex h-4/5 flex-col overflow-hidden">
+    <div class="flex h-4/5 flex-col overflow-hidden" >
     <div class="top-bar flex  p-3 bg-white"  >
         <div class="flex column gap-5 w-full">
-          <button class="text-2xl" @click="window.history.back()">←</button>
+          <button class="text-2xl" @click="window.location.href='/app'">←</button>
          <div class="flex gap-2 items-center">
            <WhatsAppIcon class="h-8 w-8 text-gray-500" />
            <h1>Whatsapp</h1>
@@ -185,6 +186,7 @@ onBeforeUnmount(() => {
       v-model="showAddLeadModal" 
       :first_name="selectedPhone.name || ''"
       :contact_number="selectedPhone.number || ''"
+      @lead-saved="$root.$emit('lead-saved')"
       />
 
 
@@ -231,4 +233,14 @@ onBeforeUnmount(() => {
 *{
   overflow: hidden;
 }
+.backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.3); /* Semi-transparent background */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+}
+
 </style>

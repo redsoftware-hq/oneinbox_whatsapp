@@ -382,7 +382,11 @@ def save_as_lead(data, doctype):
     if isinstance(data, str):
         import json
         data = json.loads(data)  # Ensure data is a dictionary
-    
+
+    # Ensure contact_number has country code
+    if data.get("contact_number") and not data["contact_number"].startswith("+"):
+        data["contact_number"] = "+91-" + data["contact_number"].strip()
+
     mobile_number = check_for_existance_as_lead(data.get("contact_number"))
     if mobile_number:
         frappe.throw(_("Phone number is already available"))
@@ -400,12 +404,55 @@ def save_as_lead(data, doctype):
     doc.insert(ignore_permissions=True)
 
     # Update Whatsapp User if they exist
-    whatsapp_contact = frappe.get_all("Whatsapp User", filters={"phone": data.get("contact_number")}, limit=1)
+    query = f"""
+    SELECT name FROM `tabWhatsApp Contact`
+    WHERE phone LIKE '%{data.get('contact_number')}%'
+    OR phone LIKE '%{data.get('contact_number').replace("+91-", "")}%'
+    LIMIT 1
+    """
+
+    whatsapp_contact = frappe.db.sql(query, as_dict=True)
     if whatsapp_contact:
-        whatsapp_user = frappe.get_doc("Whatsapp User", whatsapp_contact[0].name)
-        whatsapp_user.is_a_lead = 1
+        whatsapp_user = frappe.get_doc("WhatsApp Contact", whatsapp_contact[0].name)
+        whatsapp_user.is_lead = 1
         whatsapp_user.save(ignore_permissions=True)
-
-    return {"message": "Lead saved successfully"}
-
     
+    
+    return {"message": whatsapp_contact}
+
+@frappe.whitelist(allow_guest=True)
+def get_form_data():
+    executive=frappe.get_all("Executive",fields=["*"])
+    center=frappe.get_all("Center",fields=["*"])
+    return {"executive":executive,"center":center}
+
+@frappe.whitelist(allow_guest=True)
+def get_leadmapping_fields():
+    fields = frappe.get_single("WhatsApp Settings")
+    mappings = {"lead_reference_doctype": fields.lead_reference_doctype}
+
+    field_mappings = []
+
+    if fields.whatsapp_lead_field_mapping:
+        for field in fields.whatsapp_lead_field_mapping:
+            field_mapping = {
+                key: value for key, value in field.as_dict().items()
+                if key not in ["name", "creation", "modified", "modified_by", "owner", "idx", "docstatus","parent","parenfield","parenttype","doctype"]
+            }
+            field_mapping["linked_records"] = []
+            field_mapping["select_options"]=[]
+            
+            if field.doctype_field_type == "Select" and field.options:
+                options_list = field.options.split("\n")
+                field_mapping["select_options"]=options_list
+                field_mapping["linked_records"] = []
+                
+                
+            
+            elif field.doctype_field_type == "Link":
+                linked_doctype = frappe.get_meta(fields.lead_reference_doctype).get_field(field.lead_field_name).options
+                field_mapping["linked_records"] = [lead.name for lead in frappe.get_all(linked_doctype, fields=["name"])]
+                field_mapping["select_options"]=[]
+            field_mappings.append(field_mapping)
+
+    return {"mappings": mappings, "field_mappings": field_mappings}

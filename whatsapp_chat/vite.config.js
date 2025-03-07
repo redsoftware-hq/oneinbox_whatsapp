@@ -46,7 +46,7 @@ export default defineConfig({
     },
   },
   build: {
-    outDir: '../frappe_hfhg/public/whatsapp',
+    outDir: '../frappe_whatsapp/public/whatsapp_chat',
     emptyOutDir: true,
     commonjsOptions: {
       include: [/tailwind.config.js/, /node_modules/],

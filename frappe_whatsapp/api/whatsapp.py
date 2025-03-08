@@ -128,8 +128,10 @@ def is_whatsapp_installed():
     return True
 
 
-@frappe.whitelist()
+@frappe.whitelist(allow_guest=True)
 def get_whatsapp_messages(reference_doctype = None, reference_name = None, phone = None):
+    
+    
     if not frappe.db.exists("DocType", "WhatsApp Message"):
         return []
     messages = []
@@ -144,11 +146,10 @@ def get_whatsapp_messages(reference_doctype = None, reference_name = None, phone
 
     or_filters = None
     if phone:
-        # filter OR to check phone in to and from field
         or_filters = [
-            {"from": phone},
-            {"to": phone}
-        ] 
+    {"from": ["like", f"%{phone}"]},  
+    {"to": ["like", f"%{phone}"]}
+] 
 
     messages += frappe.get_all(
         "WhatsApp Message",
@@ -176,6 +177,9 @@ def get_whatsapp_messages(reference_doctype = None, reference_name = None, phone
             "template_header_parameters",
         ],
     )
+    
+    
+    
 
     # Filter messages to get only Template messages
     template_messages = [
@@ -187,7 +191,6 @@ def get_whatsapp_messages(reference_doctype = None, reference_name = None, phone
         # Find the template that this message is using
         template = frappe.get_doc("WhatsApp Templates", template_message["template"])
 
-        # If the template is found, add the template details to the template message
         if template:
             template_message["template_name"] = template.template_name
             if template_message["template_parameters"]:
@@ -383,42 +386,27 @@ def save_as_lead(data, doctype):
         import json
         data = json.loads(data)  # Ensure data is a dictionary
 
-    # Ensure contact_number has country code
     if data.get("contact_number") and not data["contact_number"].startswith("+"):
         data["contact_number"] = "+91-" + data["contact_number"].strip()
 
-    mobile_number = check_for_existance_as_lead(data.get("contact_number"))
-    if mobile_number:
-        frappe.throw(_("Phone number is already available"))
-
-    if isinstance(data.get("executive"), dict):
-        data["executive"] = data["executive"].get("value")
-
-    if isinstance(data.get("center"), dict):
-        data["center"] = data["center"].get("value")
-        
-    if isinstance(data.get("source"), dict):
-        data["source"] = data["source"].get("value")
 
     doc = frappe.get_doc({"doctype": doctype, **data})
     doc.insert(ignore_permissions=True)
 
-    # Update Whatsapp User if they exist
     query = f"""
-    SELECT name FROM `tabWhatsApp Contact`
-    WHERE phone LIKE '%{data.get('contact_number')}%'
-    OR phone LIKE '%{data.get('contact_number').replace("+91-", "")}%'
-    LIMIT 1
-    """
+        UPDATE `tabWhatsApp Contact`
+        SET is_lead = 1
+        WHERE phone LIKE '%{data.get('contact_number')}%'
+        OR phone LIKE '%{data.get('contact_number').replace("+91-", "")}%'
+        LIMIT 1
+        """
 
-    whatsapp_contact = frappe.db.sql(query, as_dict=True)
-    if whatsapp_contact:
-        whatsapp_user = frappe.get_doc("WhatsApp Contact", whatsapp_contact[0].name)
-        whatsapp_user.is_lead = 1
-        whatsapp_user.save(ignore_permissions=True)
+    frappe.db.sql(query)
+    frappe.db.commit()
+
     
     
-    return {"message": whatsapp_contact}
+    return {"message": "Lead created successfully", "lead": doc.name, "status": 200}
 
 @frappe.whitelist(allow_guest=True)
 def get_form_data():
@@ -456,3 +444,65 @@ def get_leadmapping_fields():
             field_mappings.append(field_mapping)
 
     return {"mappings": mappings, "field_mappings": field_mappings}
+
+
+@frappe.whitelist(allow_guest=True)
+def reset_unread_count(phone):
+
+    try:
+        user_doc = frappe.get_all(
+            "WhatsApp Contact",
+            filters={"phone": phone},
+            fields=["name"]
+        )
+
+        if user_doc:
+            user_doc = frappe.get_doc("WhatsApp Contact", user_doc[0]["name"])
+            user_doc.unread_message_count = 0
+            user_doc.save(ignore_permissions=True)
+            return {"status": "success", "message": "Unread message count reset successfully."}
+        else:
+            return {"status": "error", "message": f"Phone Number {phone} on WhatsApp Contact List"}
+    except Exception as e:
+        frappe.log_error(frappe.get_traceback(), "Reset Unread Count Error")
+        return {"status": "error", "message": str(e)}
+    
+    
+def update_last_message_time(phone, timestamp=None, increment_unread=False, reset=False):
+    """
+    Update the last message time in the Messenger User collection.
+
+    Args:
+        user_id (str): The PSID or IG user ID.
+        platform (str): "Messenger" or "Instagram".
+        timestamp (int/float/str, optional): The timestamp of the last message.
+        increment_unread (bool, optional): Whether to increment the unread message count.
+
+    Returns:
+        None
+    """
+    try:
+        if isinstance(timestamp, (int, float)):
+            formatted_timestamp = convert_epoch_to_datetime(timestamp)
+        else:
+            formatted_timestamp = timestamp if timestamp else now()
+    
+        user_doc = frappe.get_all(
+            "WhatsApp Contact",
+            filters={"user_id": user_id, "platform": platform},
+            fields=["name", "unread_message_count"]
+        )
+
+        if user_doc:
+            user_doc = frappe.get_doc("WhatsApp Contact", user_doc[0]["name"])
+            user_doc.last_interaction_timestamp = formatted_timestamp
+            if increment_unread:
+                user_doc.unread_message_count = (user_doc.unread_message_count or 0) + 1
+            if reset:
+                user_doc.unread_message_count = 0
+            user_doc.save(ignore_permissions=True)
+        else:
+            frappe.log_error("Timestamp Update Error", f"User ID {user_id} on platform {platform} not found in Messenger User.")
+    except Exception as e:
+        frappe.log_error("Timestamp Update Error", f"Failed to update last message timestamp for user ID {user_id}. Error: {str(e)}")
+        raise e

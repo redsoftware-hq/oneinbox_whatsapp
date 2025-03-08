@@ -58,15 +58,41 @@ function sendTemplate(template) {
 
 const whatsappMessages = computed(() =>
   createResource({
-    url: '',
-    cache: ['whatsapp_messages', selectedPhone.value],
+    url: '/api/method/frappe_whatsapp.api.whatsapp.get_whatsapp_messages',
+    cache: ['whatsapp_messages', selectedPhone.number],
     params: {
-      phone: selectedPhone.value || ""
+      phone: selectedPhone.number || ""
     },
     auto: true,
     transform: (data) => data.sort((a, b) => new Date(a.creation) - new Date(b.creation)),
+
+    
   })
+  
 );
+
+// Watch for changes in whatsappMessages and reset message count
+watch(whatsappMessages, (newMessages) => {
+  if (newMessages && newMessages.length) {
+    resetMessageCount(selectedPhone.number);
+  }
+});
+
+// Function to reset the message count
+function resetMessageCount(phone) {
+  if (!phone) return;
+
+  frappe.call({
+    method: "frappe_whatsapp.api.whatsapp.reset_unread_count",
+    args: { phone },
+    callback: function (r) {
+      if (!r.exc) {
+        console.log("Message count reset successfully");
+      }
+    },
+  });
+}
+
 
 function scrollToBottom() {
   nextTick(() => {

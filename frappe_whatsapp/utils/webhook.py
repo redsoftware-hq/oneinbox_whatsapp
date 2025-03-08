@@ -173,7 +173,7 @@ def post():
 
 def update_contact(wa_id, wa_name):
     """Update Contact Doctype with WhatsApp info and last message time."""
-    existing_contact = frappe.db.get_value("WhatsApp Contact", {"whatsapp_phone": wa_id}, ["name"])
+    existing_contact = frappe.db.get_value("WhatsApp Contact", {"phone": wa_id}, ["name"])
 
     payload = { "last_message_time": frappe.utils.now() }
     if wa_name:

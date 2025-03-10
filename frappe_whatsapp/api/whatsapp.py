@@ -2,118 +2,6 @@ import frappe
 import json
 from frappe import _
 
-def validate(doc, method):
-    if doc.type == "Incoming" and doc.get("from"):
-        name, doctype = get_lead_from_number(doc.get("from"))
-        doc.reference_doctype = doctype
-        doc.reference_name = name
-
-def on_update(doc, method):
-    try:
-        frappe.publish_realtime(
-            "whatsapp_message",
-            {
-                "reference_doctype": doc.reference_doctype,
-                "reference_name": doc.reference_name,
-                "from": doc.get("from"),
-                "to": doc.get("to")
-            },
-        )
-        notify_agent(doc)
-    except Exception as e:
-        frappe.log_error(f"Failed to send Whatsapp Message Event: {str(e)}", "WhatsApp Notification")
-
-def notify_agent(doc):
-    try:
-        if doc.type != "Incoming" or not doc.reference_name or doc.reference_doctype != "Lead":
-            return
-        
-        # Fetch the executive name directly from the Lead doctype
-        executive = frappe.db.get_value("Lead", doc.reference_name, "executive")
-
-        if not executive:
-            return
-        
-        # Fetch the executive's email from the Executive doctype
-        executive_email = frappe.db.get_value("Executive", executive, "email")
-
-        if not executive_email:
-            return
-        
-        def truncate_text(text, length=30):
-            """Truncate text if it exceeds the given length."""
-            return (text[:length] + '...') if text and len(text) > length else text
-        
-          # Determine message content based on content type
-        content_type = doc.get("content_type")
-        if content_type == "text":
-            message_preview = truncate_text(doc.message)
-        else:
-            message_preview = f"[{content_type.capitalize()}]"
-        
-        # Prepare the notification message
-        notification_text = f"""
-            <div class="mb-2 leading-5 text-gray-600">
-                <span>WhatsApp message from </span>
-                <span class="font-medium text-gray-900"><strong>{doc.reference_name}</strong></span>
-                <span>: {message_preview}</span>
-            </div>
-        """
-
-        # Function to create Notification Log
-        def create_notification(user):
-            try:
-                frappe.get_doc({
-                    "doctype": "Notification Log",
-                    "subject": notification_text,
-                    "document_type": "Lead",
-                    "document_name": doc.reference_name,
-                    "for_user": user,
-                    "type": "Alert"
-                }).insert(ignore_permissions=True)
-            except Exception as e:
-                frappe.log_error(f"Failed to create notification for {user}: {str(e)}", "WhatsApp Notification")
-
-        # Send notification to Executive if email exists
-        if executive_email:
-            create_notification(executive_email)
-
-        # Always notify Administrator
-        # create_notification("info@hairfreehairgrow.com")
-
-        # Ensure database changes are saved
-        frappe.db.commit()
-    except Exception as e:
-        frappe.log_error(f"Failed to notify Executive/Administrator: {str(e)}", "WhatsApp Notification")
-
-def get_lead_from_number(number):
-    """Get lead from the given number using Query Builder."""
-    mobile_no = parse_mobile_no(number)
-    query = """
-        SELECT name, contact_number, executive
-        FROM `tabLead`
-        WHERE status != 'Duplicate Lead'
-        AND REPLACE(REPLACE(REPLACE(contact_number, ' ', ''), '-', ''), '+', '') LIKE %(mobile_no)s
-        ORDER BY creation DESC
-        LIMIT 1
-    """
-
-    lead = frappe.db.sql(query, {"mobile_no": f"%{mobile_no}%"}, as_dict=True)
-
-    if lead:
-        lead_name = lead[0].get("name")
-        return lead_name, "Lead"
-
-    return None, None
-
-
-def parse_mobile_no(mobile_no: str):
-    """Parse mobile number to remove spaces, brackets, etc.
-    >>> parse_mobile_no('+91 (766) 667 6666')
-    ... '+917666676666'
-    """
-    return "".join([c for c in mobile_no if c.isdigit()])
-
 
 @frappe.whitelist()
 def is_whatsapp_enabled():
@@ -184,7 +72,6 @@ def get_whatsapp_messages(reference_doctype = None, reference_name = None, phone
 
     # Iterate through template messages
     for template_message in template_messages:
-        # Find the template that this message is using
         template = frappe.get_doc("WhatsApp Templates", template_message["template"])
 
         # If the template is found, add the template details to the template message
@@ -363,49 +250,189 @@ def check_for_existance_as_lead(contact_number):
        return  True
     return False
 
-
 @frappe.whitelist(allow_guest=True)
-def get_whatsapp_contact():
-    whatsapp_contacts = frappe.get_all("WhatsApp Contact", fields=["phone",
-                                                                   "whatsapp_name",
-                                                                   "unread_message_count",
-                                                                   "last_message_time",
-                                                                   "discard","is_lead",
-                                                                   "marketing_opt_in"],filters={"is_lead":0})
-    
+def get_whatsapp_contact(start=0, page_length=20):
+    start = int(start)
+    page_length = int(page_length)
 
-    
+    whatsapp_contacts = frappe.get_all(
+        "WhatsApp Contact",
+        fields=[
+            "phone",
+            "whatsapp_name",
+            "unread_message_count",
+            "last_message_time",
+            "discard",
+            "is_lead",
+            "marketing_opt_in"
+        ],
+        filters={"is_lead": 0},
+        start=start,
+        page_length=page_length,
+        order_by="last_message_time desc"
+    )
+
     return whatsapp_contacts
+
+
+import frappe
+import json
+
+import frappe
+import json
 
 @frappe.whitelist(allow_guest=True)
 def save_as_lead(data, doctype):
-    if isinstance(data, str):
-        import json
-        data = json.loads(data)  # Ensure data is a dictionary
+    try:
+        # Ensure data is a dictionary
+        if isinstance(data, str):
+            data = json.loads(data)
+
+        contact_number = data.get("contact_number", "").strip()
+        if not contact_number:
+            return {"status": "error", "message": "Contact number is required"}
+
+        # Ensure the contact number is in the correct format
+        if not contact_number.startswith("+"):
+            contact_number = "+91-" + contact_number
+
+        data["contact_number"] = contact_number
+
+        # Create and insert the new document
+        doc = frappe.get_doc({"doctype": doctype, **data})
+        doc.insert(ignore_permissions=True)
+
+        # Update the existing WhatsApp Contact
+        phone_variants = [contact_number, contact_number.replace("+91-", "")]
+
+        query = """
+            UPDATE `tabWhatsApp Contact`
+            SET is_lead = 1, reference_doctype = %s, reference_name = %s
+            WHERE phone LIKE %s OR phone LIKE %s
+            LIMIT 1
+        """
+
+        frappe.db.sql(query, (doctype, doc.name, f"%{phone_variants[0]}%", f"%{phone_variants[1]}%"))
+        frappe.db.commit()
+
+        return {"status": "success", "message": "Lead saved and contact updated"}
+
+    except Exception as e:
+        frappe.log_error(frappe.get_traceback(), "save_as_lead Error")
+        return {"status": "error", "message": str(e)}
+
+
+@frappe.whitelist(allow_guest=True)
+def get_form_data():
+    executive=frappe.get_all("Executive",fields=["*"])
+    center=frappe.get_all("Center",fields=["*"])
+    return {"executive":executive,"center":center}
+
+@frappe.whitelist(allow_guest=True)
+def get_leadmapping_fields():
+    fields = frappe.get_single("WhatsApp Settings")
+    mappings = {"lead_reference_doctype": fields.lead_reference_doctype}
+
+    field_mappings = []
+
+    if fields.whatsapp_lead_field_mapping:
+        for field in fields.whatsapp_lead_field_mapping:
+            field_mapping = {
+                key: value for key, value in field.as_dict().items()
+                if key not in ["name", "creation", "modified", "modified_by", "owner", "idx", "docstatus","parent","parenfield","parenttype","doctype"]
+            }
+            field_mapping["linked_records"] = []
+            field_mapping["select_options"]=[]
+            
+            if field.doctype_field_type == "Select" and field.options:
+                options_list = field.options.split("\n")
+                field_mapping["select_options"]=options_list
+                field_mapping["linked_records"] = []
+                
+                
+            
+            elif field.doctype_field_type == "Link":
+                linked_doctype = frappe.get_meta(fields.lead_reference_doctype).get_field(field.lead_field_name).options
+                field_mapping["linked_records"] = [lead.name for lead in frappe.get_all(linked_doctype, fields=["name"])]
+                field_mapping["select_options"]=[]
+            field_mappings.append(field_mapping)
+
+    return {"mappings": mappings, "field_mappings": field_mappings}
+
+
+@frappe.whitelist(allow_guest=True)
+def reset_unread_count(phone):
+
+    try:
+        user_doc = frappe.get_all(
+            "WhatsApp Contact",
+            filters={"phone": phone},
+            fields=["name"]
+        )
+
+        if user_doc:
+            user_doc = frappe.get_doc("WhatsApp Contact", user_doc[0]["name"])
+            user_doc.unread_message_count = 0
+            user_doc.save(ignore_permissions=True)
+            return {"status": "success", "message": "Unread message count reset successfully."}
+        else:
+            return {"status": "error", "message": f"Phone Number {phone} on WhatsApp Contact List"}
+    except Exception as e:
+        frappe.log_error(frappe.get_traceback(), "Reset Unread Count Error")
+        return {"status": "error", "message": str(e)}
     
-    mobile_number = check_for_existance_as_lead(data.get("contact_number"))
-    if mobile_number:
-        frappe.throw(_("Phone number is already available"))
-
-    if isinstance(data.get("executive"), dict):
-        data["executive"] = data["executive"].get("value")
-
-    if isinstance(data.get("center"), dict):
-        data["center"] = data["center"].get("value")
+def send_message_event(doc, method=None):
+    try:
+        formatted_message = {
+            "from": getattr(doc, "from"),
+            "to": getattr(doc, "to"),
+            "type": getattr(doc, "type"),
+            "message": getattr(doc, "message", ""),
+            "timestamp": getattr(doc, "creation"),
+            "content_type": getattr(doc, "content_type"),
+            "message_type": getattr(doc, "message_type"),
+            "attach": getattr(doc, "attach"),
+            "template": getattr(doc, "template"),
+            "use_template": getattr(doc, "use_template"),
+            "message_id": getattr(doc, "name"),
+            "is_reply": getattr(doc, "is_reply"),
+            "reply_to_message_id": getattr(doc, "reply_to_message_id"),
+            "reference_doctype": getattr(doc, "reference_doctype"),
+            "reference_name": getattr(doc, "reference_name"),
+            "template_parameters": getattr(doc, "template_parameters"),
+            "template_header_parameters": getattr(doc, "template_header_parameters"),
+            
+            }
         
-    if isinstance(data.get("source"), dict):
-        data["source"] = data["source"].get("value")
 
-    doc = frappe.get_doc({"doctype": doctype, **data})
-    doc.insert(ignore_permissions=True)
+        frappe.publish_realtime("oneinbox_whatsapp_message", formatted_message)
 
-    # Update Whatsapp User if they exist
-    whatsapp_contact = frappe.get_all("Whatsapp User", filters={"phone": data.get("contact_number")}, limit=1)
-    if whatsapp_contact:
-        whatsapp_user = frappe.get_doc("Whatsapp User", whatsapp_contact[0].name)
-        whatsapp_user.is_a_lead = 1
-        whatsapp_user.save(ignore_permissions=True)
+    except Exception as e:
+        frappe.logger().error(f"Error Sending Real-Time Message Event: {frappe.get_traceback()}")
+        frappe.log_error("Error Sending Real-Time Message Event", frappe.get_traceback())
 
-    return {"message": "Lead saved successfully"}
 
+
+def emit_user_update_event(doc, method=None):
+    try:
+        user_update_event = {
+			"phone": doc.phone,
+			"last_message_time": doc.last_message_time,
+			"whatsapp_name": doc.whatsapp_name,
+			"unread_message_count": doc.unread_message_count,
+			"is_lead": doc.is_lead,
+			"discard": doc.discard,
+			"marketing_opt_in": doc.marketing_opt_in,
+			}
+
+        frappe.publish_realtime(
+            "whatsapp_contact_update",
+            user_update_event,
+        )    
+           
+    except Exception as e:
+        frappe.logger().error(f"Error Emitting User Update Event: {frappe.get_traceback()}")
+        frappe.log_error("Error Emitting User Update Event", frappe.get_traceback())
+
+    
     

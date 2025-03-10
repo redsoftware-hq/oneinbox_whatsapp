@@ -1,6 +1,8 @@
 <script setup>
-import { ref, reactive, onMounted } from 'vue';
+import { ref, reactive, onMounted ,getCurrentInstance} from 'vue';
 import WhatsApp from './Whatsapp.vue'; // Rendering Component
+const app = getCurrentInstance();
+const { $socket } = app.appContext.config.globalProperties;
 
 // non-supportive translation fn.
 window.__ = (text) => text;

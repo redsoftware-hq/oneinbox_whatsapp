@@ -15,7 +15,7 @@ def get_context():
 	context = frappe._dict()
 	context.boot = get_boot()
 	if frappe.session.user != "Guest":
-		capture("active_site", "crm")
+		capture("active_site", "whatsapp_chat")
 	return context
 
 
@@ -48,4 +48,4 @@ def get_boot():
 
 
 def get_default_route():
-	return "/crm"
+	return "/whatsapp_chat"

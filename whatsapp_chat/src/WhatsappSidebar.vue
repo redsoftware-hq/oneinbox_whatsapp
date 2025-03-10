@@ -1,7 +1,6 @@
 <template>
-  <div class="h-screen w-80 bg-white shadow-md flex flex-col border-r border-gray-300">
-    <div class="p-4 flex justify-between items-center border-b border-gray-300 bg-gray-100">
-      <button @click="$router.go(-1)" class="text-3xl font-bold">←</button>
+  <div class="h-4/5 w-100 bg-white flex flex-col border-r border-gray-100">
+    <div class="p-4 flex justify-between items-center border-b bg-gray-100">
       <h2 class="text-lg font-semibold text-gray-700">Contacts</h2>
     </div>
 
@@ -19,19 +18,14 @@
         <li
           v-for="contact in filteredContacts"
           :key="contact.phone"
-          class="flex items-center justify-between p-3 cursor-pointer transition duration-200 hover:bg-gray-300 border-b border-gray-300 bg-gray-100"
+          class="flex items-center justify-between p-4 cursor-pointer transition duration-200 hover:bg-gray-100 border-b border-gray-300 bg-white w-full"
           :class="{ 'bg-blue-100': selectedContact === contact.phone }"
           @click="selectContact(contact)"
         >
           <div class="flex flex-col space-y-2 w-full">
             <div class="flex justify-between w-full">
               <div class="text-lg font-medium text-gray-800">{{ contact.phone }}</div>
-              <Badge
-                v-if="contact.unread_message_count > 0"
-                variant="solid"
-                theme="green"
-                size="sm"
-              >
+              <Badge v-if="contact.unread_message_count > 0" variant="solid" theme="green" size="sm">
                 {{ contact.unread_message_count }}
               </Badge>
             </div>
@@ -44,66 +38,94 @@
         </li>
       </ul>
 
-      <div v-else-if="contacts.loading" class="text-gray-500 text-center p-4">Loading contacts...</div>
       <div v-else class="text-gray-500 text-center p-4">No contacts found</div>
     </div>
   </div>
 </template>
 
 <script>
-import { Badge, createResource } from "frappe-ui";
+import { Badge } from "frappe-ui";
+import { format, isToday, isYesterday } from "date-fns";
+import { emitter } from "./utils/eventBus.js";
+import { ref, computed, watch } from "vue";
 
 export default {
   name: "WhatsappSidebar",
-  data() {
-    return {
-      search: "",
-      selectedContact: null,
-    };
+
+  props: {
+    user_update: Boolean,
+    socket: Object,
+    contacts: Array, // Contacts now come as a prop
   },
-  setup() {
-    const contacts = createResource({
-      url: "/api/method/frappe_whatsapp.api.whatsapp.get_whatsapp_contact",
-      auto: true,
+
+  setup(props) {
+    const search = ref("");
+    const selectedContact = ref(null);
+
+    const resetMessageCount = async (phone) => {
+      if (!phone) return;
+      try {
+        await fetch("/api/method/frappe_whatsapp.api.whatsapp.reset_unread_count", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ phone }),
+        });
+      } catch (error) {
+        console.error("Error resetting message count:", error);
+      }
+    };
+
+    const filteredContacts = computed(() => {
+      if (!search.value) return props.contacts;
+      return props.contacts.filter(
+        (contact) =>
+          contact.phone.includes(search.value) ||
+          (contact.whatsapp_name || "").toLowerCase().includes(search.value.toLowerCase())
+      );
     });
 
-    return { contacts };
-  },
-  computed: {
-    filteredContacts() {
-      return (this.contacts.data || []).filter(
-        (contact) =>
-          contact.phone.toLowerCase().includes(this.search.toLowerCase()) ||
-          (contact.whatsapp_name || "").toLowerCase().includes(this.search.toLowerCase())
-      );
-    },
-  },
-  methods: {
-    selectContact(contact) {
-      this.selectedContact = contact.phone;
-      this.$emit("contact-selected", { number: contact.phone, name: contact.whatsapp_name });
-    },
-    formatDate(dateString) {
-      if (!dateString) return "N/A";
-      const date = new Date(dateString);
-      return date.toLocaleDateString();
-    },
+    const selectContact = (contact) => {
+      selectedContact.value = contact.phone;
+      resetMessageCount(selectedContact.value);
+
+      emitter.emit("contact-selected", {
+        number: contact.phone,
+        name: contact.whatsapp_name,
+      });
+      localStorage.setItem("selectedContact", JSON.stringify(contact));
+      emitter.emit("contact-selected-refresh");
+    };
+
+    watch(() => props.contacts, (newContacts) => {
+      console.log("Contacts updated:", newContacts);
+    });
+
+    const formatDate = (dateString) => {
+      if (!dateString) return "";
+      const lastInteraction = new Date(dateString);
+      let formattedTime = "";
+      const currentYear = new Date().getFullYear();
+      const messageYear = lastInteraction.getFullYear();
+
+      if (isToday(lastInteraction)) {
+        formattedTime = format(lastInteraction, "hh:mm a");
+      } else if (isYesterday(lastInteraction)) {
+        formattedTime = "Yesterday";
+      } else if (currentYear === messageYear) {
+        formattedTime = format(lastInteraction, "dd MMM");
+      } else {
+        formattedTime = format(lastInteraction, "dd/MM/yy");
+      }
+      return formattedTime;
+    };
+
+    return {
+      search,
+      selectedContact,
+      filteredContacts,
+      selectContact,
+      formatDate,
+    };
   },
 };
 </script>
-
-<style scoped>
-/* Custom scrollbar */
-::-webkit-scrollbar {
-  width: 6px;
-}
-::-webkit-scrollbar-thumb {
-  background: #d1d5db;
-  border-radius: 10px;
-}
-
-/* Smooth transitions */
-li {
-  transition: background-color 0.2s ease-in-out;
-}
-</style>

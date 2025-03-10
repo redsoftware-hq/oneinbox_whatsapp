@@ -111,6 +111,24 @@ no_csrf = True
 #   }
 # }
 
+# doc_events = {
+#     "WhatsApp Message": {
+#         "on_update": ["frappe_whatsapp.api.whatsapp.send_message_event"]
+#     },
+#     "WhatsApp Contact": {
+#         "on_update": ["frappe_whatsapp.api.whatsapp.emit_user_update_event"]
+#     }
+# }
+
+# doc_events = {
+#     "WhatsApp Message": {
+#         "on_update": ["frappe_whatsapp.api.whatsapp.send_message_event"],
+        
+#     },
+#     "WhatsApp Contact": {
+#         "on_update": ["frappe_whatsapp.api.whatsapp.emit_user_update_event"]
+#     }
+# }
 # Scheduled Tasks
 # ---------------
 
@@ -216,6 +234,16 @@ doc_events = {
         "after_delete": "frappe_whatsapp.utils.run_server_script_for_doc_event",
         "before_update_after_submit": "frappe_whatsapp.utils.run_server_script_for_doc_event",
         "on_update_after_submit": "frappe_whatsapp.utils.run_server_script_for_doc_event"
+    },
+    "WhatsApp Message": {
+        "on_update": ["frappe_whatsapp.api.whatsapp.send_message_event"]
+        
+        
+    },
+    "WhatsApp Contact": {
+        "on_update": ["frappe_whatsapp.api.whatsapp.emit_user_update_event"],
+        # "after_insert": ["frappe_whatsapp.api.whatsapp.emit_user_update_event"],
+        
     }
 }
 

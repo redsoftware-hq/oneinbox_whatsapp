@@ -93,6 +93,12 @@ watchEffect(() => {
   }
 });
 
+const closeDialog = () => {
+  show.value = false;
+  console.log("Closing modal, show =", show.value);
+};
+
+// Function to map field types
 const mapInputType = (doctypeFieldType, leadFieldValue) => {
   if (leadFieldValue === "created_on") {
     return "text"; // Explicitly setting 'created_on' as text
@@ -138,6 +144,8 @@ const submitLead = async () => {
     });
 
     const result = await response.json();
+    emitter.emit("lead-saved");
+    
     console.log("Lead Submitted:", result);
   } catch (error) {
     console.error("Error submitting lead:", error);

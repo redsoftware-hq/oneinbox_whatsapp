@@ -28,13 +28,13 @@ const contacts = ref([]); // Stores contact list
 const selectedPhone = ref(null);
 const showWhatsappTemplates = ref(false);
 const showAddLeadModal = ref(false);
-const isLoading = ref(true);
+const isLoading = ref(false);
 const user_update = ref(false);
 const whatsappMessages = ref([]);
 
 // Fetch contacts from API
 const fetchContacts = async () => {
-  isLoading.value = true;
+  // isLoading.value = true;
   try {
     const response = await fetch("/api/method/frappe_whatsapp.api.whatsapp.get_whatsapp_contact");
     const data = await response.json();
@@ -43,7 +43,7 @@ const fetchContacts = async () => {
   } catch (error) {
     console.error("Error fetching contacts:", error);
   }
-  isLoading.value = false;
+  // isLoading.value = false;
 };
 
 // Send a message when a contact is clicked
@@ -100,6 +100,30 @@ watch(selectedPhone, async (newPhone) => {
   }
 });
 
+function sendTemplate(template) {
+  showWhatsappTemplates.value = false;
+  try {
+    createResource({
+      url: 'frappe_whatsapp.api.whatsapp.send_whatsapp_template',
+      params: {
+        reference_doctype: props.doctype,
+        reference_name: props.docname,
+        to: props.phone,
+        template,
+      },
+      auto: true,
+      headers: {
+       
+      }
+    }).then(() => {
+      console.log('Template sent successfully!');
+    });
+  } catch (error) {
+    console.error('Error sending template:', error);
+  }
+}
+
+
 function fetchMessages() {
   if (!selectedPhone.value) return;
   createResource({
@@ -148,6 +172,13 @@ onMounted(() => {
       selectedPhone.value = data;
     }
   });
+  emitter.on("lead_submission_started", () => {
+    isLoading.value = true;
+  });
+  emitter.on("lead_submission_completed", () => {
+    isLoading.value = false;
+    showAddLeadModal.value = false;
+  });
 });
 
 
@@ -160,7 +191,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="flex h-4/5 flex-col scroll">
+  <div class="flex h-4/5 flex-col scroll " :class="{ 'splash-screen': isLoading }">
     <div class="top-bar flex p-3 bg-white">
       <div class="flex column gap-5 w-full">
          <a href="/app" class="text-2xl">←</a>
@@ -183,7 +214,7 @@ onBeforeUnmount(() => {
             <h2 class="text-sm font-semibold text-gray-800">{{ selectedPhone?.name || '' }}</h2>
           </div>
           <div class="flex items-center space-x-4">
-            <Button @click="showAddLeadModal = true" class="bg-gray-700 text-black">+ Add Lead</Button>
+            <Button @click="showAddLeadModal = true" class="bg-gray-700 text-black" :showAddLeadModal="showAddLeadModal">+ Add Lead</Button>
             <Button @click="showWhatsappTemplates = true">Send Template</Button>
           </div>
         </div>
@@ -202,11 +233,11 @@ onBeforeUnmount(() => {
         </div>
 
         <div class="chat-box-container border-t-gray-100 mb-16">
-          <WhatsAppBox v-if="selectedPhone" :doctype="props.doctype" :docname="props.docname" :phone="props.phone" @message-sent="fetchMessages" />
+          <WhatsAppBox v-if="selectedPhone" :doctype="props.doctype" :docname="props.docname" :phone="selectedPhone?.number" @message-sent="fetchMessages" />
         </div>
 
-        <WhatsappTemplateSelectorModal v-model="showWhatsappTemplates" :doctype="doctype" />
-        <WhatappAddToLeadModal v-model="showAddLeadModal" :first_name="selectedPhone?.name || ''" :contact_number="selectedPhone?.number || ''" />
+        <WhatsappTemplateSelectorModal v-model="showWhatsappTemplates" :doctype="doctype" @send="(t) => sendTemplate(t)"/>
+        <WhatappAddToLeadModal v-model="showAddLeadModal" :first_name="selectedPhone?.name || ''" :contact_number="selectedPhone?.number || ''" :isLoading="isLoading"/>
       </div>
     </div>
   </div>
@@ -220,6 +251,23 @@ onBeforeUnmount(() => {
   max-height: 100%;
   background-color: #c9cbce;
 }
+.splash-screen::after {
+  content: "Saving Lead...";
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: white;
+  background-color: rgba(0, 0, 0, 0.7);
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 9999;
+}
+
 * {
   overflow-y: hidden;
   overflow-x: hidden;

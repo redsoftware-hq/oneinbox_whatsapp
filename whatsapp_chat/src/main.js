@@ -2,7 +2,8 @@ import { createApp } from 'vue'
 import App from './App.vue'
 import { initSocket } from './socket'
 import './index.css'
-
+import {useRouter} from 'vue-router'
+const routes=useRouter()
 import {
   FrappeUI,
   Button,
@@ -36,6 +37,7 @@ let app = createApp(App)
 
 setConfig('resourceFetcher', frappeRequest)
 app.use(FrappeUI)
+app.use(routes)
 
 for (let key in globalComponents) {
   app.component(key, globalComponents[key])

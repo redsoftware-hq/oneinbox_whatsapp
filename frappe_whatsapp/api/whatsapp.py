@@ -152,13 +152,12 @@ def get_whatsapp_messages(reference_doctype = None, reference_name = None, phone
 
 @frappe.whitelist()
 def create_whatsapp_message(
-    reference_doctype,
-    reference_name,
     message,
     to,
     attach,
     reply_to,
     content_type="text",
+    type="Outgoing",
 ):
     doc = frappe.new_doc("WhatsApp Message")
 
@@ -173,12 +172,13 @@ def create_whatsapp_message(
 
     doc.update(
         {
-            "reference_doctype": reference_doctype,
-            "reference_name": reference_name,
+            # "reference_doctype": reference_doctype,
+            # "reference_name": reference_name,
             "message": message or attach,
             "to": to,
             "attach": attach,
             "content_type": content_type,
+            "type": type,
         }
     )
     doc.insert(ignore_permissions=True)
@@ -241,16 +241,6 @@ def get_from_name(message):
 
 
 @frappe.whitelist(allow_guest=True)
-def check_for_existance_as_lead(contact_number):
-    formatted_mobile_number = parse_mobile_no(contact_number)
-    lead = frappe.get_all("Lead", filters={"contact_number": formatted_mobile_number})
-    contact = frappe.get_all("Contacts", filters={"contact_number": formatted_mobile_number})
-    alternate_contact = frappe.get_all("Contacts", filters={"alternative_number": formatted_mobile_number})
-    if lead or contact or alternate_contact:
-       return  True
-    return False
-
-@frappe.whitelist(allow_guest=True)
 def get_whatsapp_contact(start=0, page_length=20):
     start = int(start)
     page_length = int(page_length)
@@ -284,7 +274,6 @@ import json
 @frappe.whitelist(allow_guest=True)
 def save_as_lead(data, doctype):
     try:
-        # Ensure data is a dictionary
         if isinstance(data, str):
             data = json.loads(data)
 
@@ -292,17 +281,14 @@ def save_as_lead(data, doctype):
         if not contact_number:
             return {"status": "error", "message": "Contact number is required"}
 
-        # Ensure the contact number is in the correct format
         if not contact_number.startswith("+"):
             contact_number = "+91-" + contact_number
 
         data["contact_number"] = contact_number
 
-        # Create and insert the new document
         doc = frappe.get_doc({"doctype": doctype, **data})
         doc.insert(ignore_permissions=True)
 
-        # Update the existing WhatsApp Contact
         phone_variants = [contact_number, contact_number.replace("+91-", "")]
 
         query = """
@@ -339,7 +325,7 @@ def get_leadmapping_fields():
         for field in fields.whatsapp_lead_field_mapping:
             field_mapping = {
                 key: value for key, value in field.as_dict().items()
-                if key not in ["name", "creation", "modified", "modified_by", "owner", "idx", "docstatus","parent","parenfield","parenttype","doctype"]
+                if key not in ["name", "creation", "modified", "modified_by", "owner", "idx", "docstatus","parent","parenfield","parenttype","doctype","parentfield"]
             }
             field_mapping["linked_records"] = []
             field_mapping["select_options"]=[]

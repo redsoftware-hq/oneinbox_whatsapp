@@ -1,23 +1,37 @@
 <template>
+  <!-- Iterate through replies and add separation based on date -->
   <div
-    v-if="reply?.message"
+    v-for="(message, index) in replies"
+    :key="index"
     class="flex items-center justify-around gap-2 px-3 pt-2 sm:px-10"
   >
+    <!-- If the current message's date is different from the previous one, add a separator -->
+    <div v-if="shouldShowSeparator(index)" class="w-full text-center">
+      <div class="separator font-semibold text-gray-500">
+        {{ formatDate(message.creation) }}
+      </div>
+      <div class="border-t border-gray-300 my-2"></div> <!-- Separator -->
+    </div>
+
+    <!-- Message Content -->
     <div
-      class="mb-1 ml-13 flex-1 cursor-pointer rounded border-0 border-l-4 border-green-500 bg-gray-100 p-2 text-base text-gray-600"
-      :class="reply.type == 'Incoming' ? 'border-green-500' : 'border-blue-400'"
+      v-if="message?.message"
+      class="mb-1 ml-13 flex-1 cursor-pointer rounded border-l-4 p-2"
+      :class="message.type == 'Incoming' ? 'border-green-500' : 'border-blue-400'"
     >
       <div
         class="mb-1 text-sm font-bold"
-        :class="reply.type == 'Incoming' ? 'text-green-500' : 'text-blue-400'"
+        :class="message.type == 'Incoming' ? 'text-green-500' : 'text-blue-400'"
       >
-        {{ reply.from_name || __('You') }}
+        {{ message.from_name || __('You') }}
       </div>
-      <div class="max-h-12 overflow-hidden" v-html="reply.message" />
+      <div class="max-h-12 overflow-hidden" v-html="message.message"></div>
     </div>
 
     <Button variant="ghost" icon="x" @click="reply = {}" />
   </div>
+
+  <!-- Input Section -->
   <div class="flex items-end gap-2 px-3 py-2.5 sm:px-10" v-bind="$attrs">
     <div class="flex h-8 items-center gap-2">
       <FileUploader @success="(file) => uploadFile(file)">
@@ -32,6 +46,7 @@
           </div>
         </template>
       </FileUploader>
+
       <IconPicker
         v-model="emoji"
         v-slot="{ togglePopover }"
@@ -48,6 +63,7 @@
         />
       </IconPicker>
     </div>
+
     <Textarea
       ref="textareaRef"
       type="textarea"
@@ -63,115 +79,142 @@
 </template>
 
 <script setup>
-import IconPicker from './components/IconPicker.vue'
-import SmileIcon from './components/Icons/SmileIcon.vue'
-// import {createResource} from '@frappe-ui/resources/index.js'
-import { createResource, Textarea, FileUploader, Dropdown } from 'frappe-ui'
-import { ref, nextTick, watch, defineModel } from 'vue'
-// import { defineModel } from 'vue';
+import { format, isToday, isYesterday } from 'date-fns';
+import IconPicker from './components/IconPicker.vue';
+import SmileIcon from './components/Icons/SmileIcon.vue';
+import { createResource, Textarea, FileUploader, Dropdown } from 'frappe-ui';
+import { ref, nextTick, watch, defineModel } from 'vue';
 
-// Define the translation function
-// const __ = (text) => text;
-
+// Define properties and refs
 const props = defineProps({
   doctype: String,
   docname: String,
   phone: String,
-})
+  reply: Object,
+});
 
-const doc = defineModel('doc')
-const whatsapp = defineModel('whatsapp')
-const reply = defineModel('reply')
-const rows = ref(1)
-const textareaRef = ref(null)
-const emoji = ref('')
+const doc = defineModel('doc');
+const whatsapp = defineModel('whatsapp', { default: () => ({ attach: '', content_type: 'text' }) });
+const reply = defineModel('reply');
+const rows = ref(1);
+const textareaRef = ref(null);
+const emoji = ref('');
 
-const content = ref('')
-const placeholder = ref(__('Type your message here...'))
-const fileType = ref('')
+const content = ref('');
+const placeholder = ref(__('Type your message here...'));
+const fileType = ref('');
 
+// Watcher for reply updates
+watch(reply, (value) => {
+  if (value?.message) {
+    show();
+  }
+});
+
+defineExpose({ show });
+
+// Function to show text area
 function show() {
-  nextTick(() => textareaRef.value.el.focus())
+  nextTick(() => textareaRef.value.el.focus());
 }
 
+// Upload file handler
 function uploadFile(file) {
-  whatsapp.value.attach = file.file_url
-  whatsapp.value.content_type = fileType.value
-  sendWhatsAppMessage()
+  whatsapp.value.attach = file.file_url;
+  whatsapp.value.content_type = fileType.value;
+  sendWhatsAppMessage();
 }
 
+// Send text message handler
 function sendTextMessage(event) {
-  if (event.shiftKey) return
-  sendWhatsAppMessage()
-  textareaRef.value.el?.blur()
-  content.value = ''
+  if (event.shiftKey) return; // Allow Shift + Enter for new lines
+  event.preventDefault(); // Prevent unintended form submission
+
+  sendWhatsAppMessage();
+  textareaRef.value.el?.blur();
+  content.value = '';
 }
 
+// Send WhatsApp message
 async function sendWhatsAppMessage() {
-  if (!doc.value || !doc.value.name) {
-    console.error('doc.value is undefined or invalid', doc.value);
-    return;
-  }
+  console.log("Sending WhatsApp message...", props);
+  console.log("Content:", content.value);
 
-  console.log("PROP PHONE value check")
   let args = {
-    reference_doctype: props.doctype,
-    reference_name: doc.value.name,
     message: content.value,
-    to: props.phone || doc.value.contact_number.replace(/\D/g, ""),
-    attach: whatsapp.value.attach || '',
+    to: props.phone || (doc.value?.phone ? doc.value.contact_number.replace(/\D/g, '') : ''),
+    attach: whatsapp.value?.attach || '',
     reply_to: reply.value?.name || '',
-    content_type: whatsapp.value.content_type,
-  }
-  content.value = ''
-  fileType.value = ''
-  whatsapp.value.attach = ''
-  whatsapp.value.content_type = 'text'
-  reply.value = {}
+    content_type: whatsapp.value?.content_type || 'text',
+  };
+
   createResource({
-    url: '',
+    url: '/api/method/frappe_whatsapp.api.whatsapp.create_whatsapp_message',
     params: args,
     auto: true,
-    headers: {
-      'X-Frappe-CSRF-Token': window.csrf_token || frappe.csrf_token
-    }
-  })
+    headers: {},
+  }).fetch().then((response) => {
+    console.log('Message sent successfully!', response);
+  }).catch((error) => {
+    console.error('Error sending message:', error);
+  });
 }
 
+// Upload options for file type selection
 function uploadOptions(openFileSelector) {
   return [
     {
       label: __('Upload Document'),
       icon: 'file',
       onClick: () => {
-        fileType.value = 'document'
-        openFileSelector()
+        fileType.value = 'document';
+        openFileSelector();
       },
     },
     {
       label: __('Upload Image'),
       icon: 'image',
       onClick: () => {
-        fileType.value = 'image'
-        openFileSelector('image/*')
+        fileType.value = 'image';
+        openFileSelector('image/*');
       },
     },
     {
       label: __('Upload Video'),
       icon: 'video',
       onClick: () => {
-        fileType.value = 'video'
-        openFileSelector('video/*')
+        fileType.value = 'video';
+        openFileSelector('video/*');
       },
     },
-  ]
+  ];
 }
 
-watch(reply, (value) => {
-  if (value?.message) {
-    show()
-  }
-})
+// Format date for display
+const formatDate = (dateString) => {
+  if (!dateString) return '';
+  const lastInteraction = new Date(dateString);
+  let formattedTime = '';
+  const currentYear = new Date().getFullYear();
+  const messageYear = lastInteraction.getFullYear();
 
-defineExpose({ show })
+  if (isToday(lastInteraction)) {
+    formattedTime = format(lastInteraction, 'hh:mm a');
+  } else if (isYesterday(lastInteraction)) {
+    formattedTime = 'Yesterday';
+  } else if (currentYear === messageYear) {
+    formattedTime = format(lastInteraction, 'dd MMM');
+  } else {
+    formattedTime = format(lastInteraction, 'dd/MM/yy');
+  }
+  return formattedTime;
+};
+
+// Determine whether to show separator based on message date
+function shouldShowSeparator(index) {
+  if (index === 0) return true; // Always show separator for the first message
+  const currentMessageDate = new Date(replies[index].creation);
+  const previousMessageDate = new Date(replies[index - 1].creation);
+  return currentMessageDate.getDate() !== previousMessageDate.getDate(); // Show separator if different date
+}
 </script>

@@ -76,7 +76,6 @@ const templates = createListResource({
   orderBy: 'modified desc',
   pageLength: 99999,
   headers: {
-      'X-Frappe-CSRF-Token': window.csrf_token || frappe.csrf_token
     }
 })
 

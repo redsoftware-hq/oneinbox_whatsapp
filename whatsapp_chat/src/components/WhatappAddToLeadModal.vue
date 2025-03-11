@@ -1,6 +1,7 @@
 <template>
   <Dialog v-model="show" :options="{ title: `Add ${form_name}`, size: '2xl' }">
     <template #body-content>
+      <form @submit.prevent="submitLead">
         <div
           v-for="(field, index) in dynamicFields"
           :key="index"
@@ -19,27 +20,30 @@
           />
         </div>
         <div class="mt-4 flex justify-end text-black">
-          <Button label="Cancel" class="mr-2" type="button" @click="closeDialog" />
-          <Button variant="solid" theme="gray" size="sm" type="button" label="Save Lead" @click.prevent="submitLead" />
+          <button class="mr-2 px-4 py-2 bg-gray-300 rounded" type="button" @click="closeDialog">Cancel</button>
+          <button class="px-4 py-2 bg-gray-700 text-white rounded" type="submit">Save Lead</button>
         </div>
+      </form>
     </template>
   </Dialog>
 </template>
 
-
-
 <script setup>
-import { ref, watchEffect, defineProps } from "vue";
-import { Button, FormControl, createResource } from "frappe-ui";
+import { ref, watchEffect, defineProps, defineEmits } from "vue";
+import { FormControl, createResource } from "frappe-ui";
 import { toRaw } from "vue";
-import { emitter } from "../utils/eventBus.js";
+import { emitter } from "../utils/eventBus";
 
 const props = defineProps({
   contact_number: String,
   first_name: String,
+  showAddLeadModal: Boolean, // Parent controls this
 });
 
-const show = ref(true);
+// const emit = defineEmits(["update:showAddLeadModal"]); // Allows v-model usage
+
+
+const show = ref(props.showAddLeadModal);
 const responseMessage = ref("");
 
 const fieldMappingsResource = createResource({
@@ -57,22 +61,30 @@ const centerOptions = ref([]);
 const dynamicFields = ref([]);
 const lead = ref({});
 const form_name = ref("");
-const response = ref("");
 
-// Watch effect to populate form fields
+// Sync modal state with prop
+watchEffect(() => {
+  show.value = props.showAddLeadModal;
+});
+
+// Close dialog properly
+const closeDialog = () => {
+  show.value = false;
+  // emit("update:showAddLeadModal", false);
+};
+
+// Fetch and set field data
 watchEffect(() => {
   if (formDataResource.data?.message) {
-    executiveOptions.value =
-      formDataResource.data.message.executive?.map((exec) => ({
-        label: exec,
-        value: exec,
-      })) || [];
+    executiveOptions.value = formDataResource.data.message.executive?.map(exec => ({
+      label: exec.fullname,
+      value: exec.fullname,
+    })) || [];
 
-    centerOptions.value =
-      formDataResource.data.message.center?.map((center) => ({
-        label: center,
-        value: center,
-      })) || [];
+    centerOptions.value = formDataResource.data.message.center?.map(center => ({
+      label: center.name,
+      value: center.name,
+    })) || [];
   }
 });
 
@@ -82,7 +94,7 @@ watchEffect(() => {
     form_name.value = fieldMappingsResource.data.mappings.lead_reference_doctype;
     
     lead.value = dynamicFields.value.reduce((acc, field) => {
-      acc[field.lead_field_name] = field.lead_field_name === "source" ? "Whatsapp" : "";
+      acc[field.lead_field_value] = field.lead_field_value === "source" ? "Whatsapp" : "";
       return acc;
     }, {});
 
@@ -92,18 +104,9 @@ watchEffect(() => {
   }
 });
 
-// Function to close the modal
-const closeDialog = () => {
-  show.value = false;
-  console.log("Closing modal, show =", show.value);
-};
-
-// Function to map field types
+// Map input types
 const mapInputType = (doctypeFieldType, leadFieldValue) => {
-  if (leadFieldValue === "created_on") {
-    return "text"; // Explicitly setting 'created_on' as text
-  }
-
+  if (leadFieldValue === "created_on") return "text";
   const typeMap = {
     Data: "text",
     Phone: "tel",
@@ -111,30 +114,28 @@ const mapInputType = (doctypeFieldType, leadFieldValue) => {
     Select: "autocomplete",
     Link: "autocomplete",
   };
-  
   return typeMap[doctypeFieldType] || "text";
 };
 
-// Format field label
-const formatLabel = (key) => {
-  return key.replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase());
-};
+// Format labels properly
+const formatLabel = (key) => key.replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase());
 
 // Get field options
 const getOptions = (field) => {
   if (field.doctype_field_type === "Select") {
-    return field.select_options.map((option) => ({ label: option, value: option }));
+    return field.select_options.map(option => ({ label: option, value: option }));
   } else if (field.doctype_field_type === "Link") {
-    return field.linked_records.map((record) => ({ label: record, value: record }));
+    return field.linked_records.map(record => ({ label: record, value: record }));
   }
   return [];
 };
 
-// Submit form data
+// Submit lead data
 const submitLead = async () => {
+  emitter.emit("lead_submission_started", lead.value);
   const leadData = JSON.parse(JSON.stringify(toRaw(lead.value)));
   const doctype = JSON.parse(JSON.stringify(toRaw(form_name.value)));
-
+  
   try {
     const response = await fetch("/api/method/frappe_whatsapp.api.whatsapp.save_as_lead", {
       headers: {
@@ -142,15 +143,22 @@ const submitLead = async () => {
         'Content-Type': 'application/json'
       },
       method: "POST",
-      body: JSON.stringify({
-        doctype: doctype,
-        data: leadData,
-      }),
+      body: JSON.stringify({ doctype, data: leadData }),
     });
 
     const result = await response.json();
-    emitter.emit("lead-saved");
-    console.log("Lead Submitted:", result);
+    if(result.message.status === "error") {
+      responseMessage.value = result.message;
+      return;
+    }
+    else if(result.message.status === "success") {
+      emitter.emit("lead_submission_completed", lead.value);
+    }
+
+    else {
+      responseMessage.value = "Error submitting lead.";
+    }
+    // closeDialog(); // Close modal on success
   } catch (error) {
     console.error("Error submitting lead:", error);
   }

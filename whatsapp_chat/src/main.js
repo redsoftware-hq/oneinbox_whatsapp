@@ -2,7 +2,8 @@ import { createApp } from 'vue'
 import App from './App.vue'
 import { initSocket } from './socket'
 import './index.css'
-
+import {useRouter} from 'vue-router'
+const routes=useRouter()
 import {
   FrappeUI,
   Button,
@@ -18,6 +19,7 @@ import {
   FeatherIcon,
 } from 'frappe-ui'
 
+// Register global components
 let globalComponents = {
   Button,
   TextInput,
@@ -30,38 +32,47 @@ let globalComponents = {
   FeatherIcon,
 }
 
+// Create Vue app instance
 let app = createApp(App)
 
 setConfig('resourceFetcher', frappeRequest)
 app.use(FrappeUI)
-// app_page.use(FrappeUI)
+app.use(routes)
 
 for (let key in globalComponents) {
   app.component(key, globalComponents[key])
-  // app_page.component(key, globalComponents[key])
 }
 
-// non supportive translation fn.
-// window.__ = (text) => text;
-
-// Mount the app
-// app.mount('#app');
-
+// Initialize WebSocket
 let socket
-if (import.meta.env.DEV) {
-  frappeRequest({ url: '/api/method/frappe_whatsapp.www.frappe_whatsapp.get_context_for_dev'}).then(
-    (values) => {
-      for (let key in values) {
-        window[key] = values[key]
-      }
-      socket = initSocket()
-      app.config.globalProperties.$socket = socket
-      app.mount('#app')
-    },
-  )
-  
-} else {
+
+// Helper function to log and mount app
+const mountApp = () => {
   socket = initSocket()
   app.config.globalProperties.$socket = socket
+  console.log('Socket initialized:', socket)
   app.mount('#app')
+  console.log('App mounted successfully.')
 }
+
+console.log('Running in development mode...')
+
+frappeRequest({ url: '/api/method/frappe_whatsapp.www.whatsapp_chat.get_context_for_dev' })
+  .then((values) => {
+    console.log('Response from get_context_for_dev:', values)
+
+    if (!values) {
+      console.error('No response received from API')
+      return
+    }
+
+    // Assign response values to window object
+    for (let key in values) {
+      window[key] = values[key]
+    }
+
+    mountApp()
+  })
+  .catch((error) => {
+    console.error('Error fetching get_context_for_dev:', error)
+  })

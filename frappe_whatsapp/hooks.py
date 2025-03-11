@@ -245,4 +245,4 @@ doc_events = {
     }
 }
 
-website_route_rules = [{'from_route': '/oneinbox_whatsapp/<path:app_path>', 'to_route': 'oneinbox_whatsapp'},]
+website_route_rules = [{'from_route': '/whatsapp_chat/<path:app_path>', 'to_route': 'whatsapp_chat'},]

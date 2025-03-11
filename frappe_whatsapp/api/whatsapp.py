@@ -3,6 +3,7 @@ import json
 from frappe import _
 
 
+
 @frappe.whitelist()
 def is_whatsapp_enabled():
     if not frappe.db.exists("DocType", "WhatsApp Settings"):
@@ -265,11 +266,7 @@ def get_whatsapp_contact(start=0, page_length=20):
     return whatsapp_contacts
 
 
-import frappe
-import json
 
-import frappe
-import json
 
 @frappe.whitelist(allow_guest=True)
 def save_as_lead(data, doctype):

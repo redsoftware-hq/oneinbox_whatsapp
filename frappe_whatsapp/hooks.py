@@ -54,7 +54,6 @@ app_include_js = "/assets/frappe_whatsapp/js/frappe_whatsapp.js"
 
 # Jinja
 # ----------
-no_csrf = True
 # add methods and filters to jinja environment
 # jinja = {
 #   "methods": "frappe_whatsapp.utils.jinja_methods",
@@ -242,7 +241,6 @@ doc_events = {
     },
     "WhatsApp Contact": {
         "on_update": ["frappe_whatsapp.api.whatsapp.emit_user_update_event"],
-        # "after_insert": ["frappe_whatsapp.api.whatsapp.emit_user_update_event"],
         
     }
 }

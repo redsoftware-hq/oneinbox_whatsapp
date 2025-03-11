@@ -46,7 +46,6 @@ const fetchContacts = async () => {
   // isLoading.value = false;
 };
 
-// Send a message when a contact is clicked
 async function sendMessageOnContactClick(phone) {
   if (!phone) return;
 
@@ -65,7 +64,6 @@ async function sendMessageOnContactClick(phone) {
   }
 }
 
-// Reset unread message count
 async function resetMessageCount(phone) {
   if (!phone) return;
 

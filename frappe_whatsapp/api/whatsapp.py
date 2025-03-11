@@ -263,37 +263,6 @@ def get_whatsapp_contact(start=0, page_length=20):
         order_by="last_message_time desc"
     )
 
-def check_for_existance_as_lead(contact_number):
-    formatted_mobile_number = parse_mobile_no(contact_number)
-    lead = frappe.get_all("Lead", filters={"contact_number": formatted_mobile_number})
-    contact = frappe.get_all("Contacts", filters={"contact_number": formatted_mobile_number})
-    alternate_contact = frappe.get_all("Contacts", filters={"alternative_number": formatted_mobile_number})
-    if lead or contact or alternate_contact:
-       return  True
-    return False
-
-@frappe.whitelist(allow_guest=True)
-def get_whatsapp_contact(start=0, page_length=20):
-    start = int(start)
-    page_length = int(page_length)
-
-    whatsapp_contacts = frappe.get_all(
-        "WhatsApp Contact",
-        fields=[
-            "phone",
-            "whatsapp_name",
-            "unread_message_count",
-            "last_message_time",
-            "discard",
-            "is_lead",
-            "marketing_opt_in"
-        ],
-        filters={"is_lead": 0},
-        start=start,
-        page_length=page_length,
-        order_by="last_message_time desc"
-    )
-
     return whatsapp_contacts
 
 

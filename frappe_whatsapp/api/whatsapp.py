@@ -241,7 +241,7 @@ def get_from_name(message):
 
 
 
-@frappe.whitelist(allow_guest=True)
+@frappe.whitelist()
 def get_whatsapp_contact(start=0, page_length=20):
     start = int(start)
     page_length = int(page_length)
@@ -269,7 +269,7 @@ def get_whatsapp_contact(start=0, page_length=20):
 
 
 
-@frappe.whitelist(allow_guest=True)
+@frappe.whitelist()
 def save_as_lead(data, doctype):
     try:
         if isinstance(data, str):
@@ -306,13 +306,13 @@ def save_as_lead(data, doctype):
         return {"status": "error", "message": str(e)}
 
 
-@frappe.whitelist(allow_guest=True)
+@frappe.whitelist()
 def get_form_data():
     executive=frappe.get_all("Executive",fields=["*"])
     center=frappe.get_all("Center",fields=["*"])
     return {"executive":executive,"center":center}
 
-@frappe.whitelist(allow_guest=True)
+@frappe.whitelist()
 def get_leadmapping_fields():
     fields = frappe.get_single("WhatsApp Settings")
     mappings = {"lead_reference_doctype": fields.lead_reference_doctype}
@@ -344,7 +344,7 @@ def get_leadmapping_fields():
     return {"mappings": mappings, "field_mappings": field_mappings}
 
 
-@frappe.whitelist(allow_guest=True)
+@frappe.whitelist()
 def reset_unread_count(phone):
 
     try:

@@ -172,21 +172,34 @@ def post():
 	return
 
 def update_contact(wa_id, wa_name):
-    """Update Contact Doctype with WhatsApp info and last message time."""
-    existing_contact = frappe.db.get_value("WhatsApp Contact", {"phone": wa_id}, ["name"])
 
-    payload = { "last_message_time": frappe.utils.now() }
+
+    unread_count = frappe.db.get_value("WhatsApp Contact", {"phone": wa_id}, "unread_message_count")
+
+    payload = {"last_message_time": frappe.utils.now()}
+
     if wa_name:
-      payload["whatsapp_name"] = wa_name
-    if existing_contact:
-        # Update existing contact
-        frappe.db.set_value("WhatsApp Contact", existing_contact, payload)
+        payload["whatsapp_name"] = wa_name
+
+    if unread_count is not None:
+        unread_count = unread_count + 1  # Increment unread count
+        payload["unread_message_count"] = unread_count
+
+        for field, value in payload.items():
+            frappe.db.set_value("WhatsApp Contact", {"phone": wa_id}, field, value)
+
     else:
-        # Create new contact if not found
-        payload["phone"] = wa_id
-        payload["doctype"] = "WhatsApp Contact"
+        payload.update({
+            "phone": wa_id,
+            "doctype": "WhatsApp Contact",
+            "unread_message_count": 1  # Set to 1 for a new contact
+        })
+
         contact_doc = frappe.get_doc(payload)
         contact_doc.insert(ignore_permissions=True)
+
+
+
 
 
 def update_status(data):

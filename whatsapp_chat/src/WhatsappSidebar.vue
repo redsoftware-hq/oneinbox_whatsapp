@@ -14,7 +14,7 @@
     </div>
 
     <div class="flex-1 overflow-y-auto bg-gray-100">
-      <ul v-if="filteredContacts.length">
+      <ul v-if="filteredContacts?.length">
         <li
           v-for="contact in filteredContacts"
           :key="contact.phone"
@@ -44,7 +44,7 @@
 </template>
 
 <script>
-import { Badge } from "frappe-ui";
+import { Badge, frappeRequest } from "frappe-ui";
 import { format, isToday, isYesterday } from "date-fns";
 import { emitter } from "./utils/eventBus.js";
 import { ref, computed, watch } from "vue";
@@ -55,7 +55,7 @@ export default {
   props: {
     user_update: Boolean,
     socket: Object,
-    contacts: Array, // Contacts now come as a prop
+    contacts: Array,
   },
 
   setup(props) {
@@ -67,7 +67,9 @@ export default {
       try {
         await fetch("/api/method/frappe_whatsapp.api.whatsapp.reset_unread_count", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json" ,
+          "X-Frappe-CSRF-Token": window.frappe.csrf_token
+          },
           body: JSON.stringify({ phone }),
         });
       } catch (error) {

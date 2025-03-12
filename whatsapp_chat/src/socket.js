@@ -2,9 +2,7 @@ import { io } from 'socket.io-client'
 import { socketio_port } from '../../../../sites/common_site_config.json'
 
 
-export function initSocket() {
-  console.log("Site Name:", import.meta.env.VITE_SITE_NAME)
-  
+export function initSocket() {  
   let host = window.location.hostname
   let siteName = import.meta.env.VITE_SITE_NAME || window.site_name || window.location.host
   let port = window.location.port ? `:${socketio_port}` : ''

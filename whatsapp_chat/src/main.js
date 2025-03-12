@@ -2,8 +2,7 @@ import { createApp } from 'vue'
 import App from './App.vue'
 import { initSocket } from './socket'
 import './index.css'
-import {useRouter} from 'vue-router'
-const routes=useRouter()
+import { createRouter, createWebHistory } from 'vue-router'
 import {
   FrappeUI,
   Button,
@@ -35,10 +34,13 @@ let globalComponents = {
 // Create Vue app instance
 let app = createApp(App)
 
+// Configure FrappeUI
 setConfig('resourceFetcher', frappeRequest)
 app.use(FrappeUI)
-app.use(routes)
 
+
+
+// Register global components
 for (let key in globalComponents) {
   app.component(key, globalComponents[key])
 }
@@ -56,23 +58,32 @@ const mountApp = () => {
 }
 
 console.log('Running in development mode...')
-
-frappeRequest({ url: '/api/method/frappe_whatsapp.www.whatsapp_chat.get_context_for_dev' })
-  .then((values) => {
-    console.log('Response from get_context_for_dev:', values)
-
-    if (!values) {
-      console.error('No response received from API')
-      return
-    }
-
-    // Assign response values to window object
-    for (let key in values) {
-      window[key] = values[key]
-    }
-
-    mountApp()
-  })
-  .catch((error) => {
-    console.error('Error fetching get_context_for_dev:', error)
-  })
+   console.log(import.meta,"-----------------")
+  if (import.meta.env.DEV) {
+    frappeRequest({ 
+      url: '/api/method/frappe_whatsapp.www.whatsapp_chat.get_context_for_dev',
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      }
+    }).then(
+      (values) => {
+        if (!window.frappe) {
+          window.frappe = {}; 
+        }
+        
+        for (let key in values) {
+          window.frappe[key] = values[key];
+        }        
+        console.log('Context loaded:', window.frappe)
+        socket = initSocket()
+        app.config.globalProperties.$socket = socket
+        app.mount('#app')
+      },
+    )
+  } else {
+    socket = initSocket()
+    app.config.globalProperties.$socket = socket
+    app.mount('#app')
+  }
+  

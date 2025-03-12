@@ -12,6 +12,7 @@ import { emitter } from './utils/eventBus';
 
 const app = getCurrentInstance();
 const { $socket } = app.appContext.config.globalProperties;
+const csrfToken = window.frappe ? window.frappe.csrf_token : '';
 
 const props = defineProps({
   doctype: String,
@@ -24,7 +25,7 @@ const props = defineProps({
   }
 });
 
-const contacts = ref([]); // Stores contact list
+const contacts = ref([]);
 const selectedPhone = ref(null);
 const showWhatsappTemplates = ref(false);
 const showAddLeadModal = ref(false);
@@ -32,18 +33,19 @@ const isLoading = ref(false);
 const user_update = ref(false);
 const whatsappMessages = ref([]);
 
-// Fetch contacts from API
 const fetchContacts = async () => {
-  // isLoading.value = true;
   try {
-    const response = await fetch("/api/method/frappe_whatsapp.api.whatsapp.get_whatsapp_contact");
+    const response = await fetch("/api/method/frappe_whatsapp.api.whatsapp.get_whatsapp_contact", {
+      headers: {
+        'X-Frappe-CSRF-Token': csrfToken
+      }
+    });
     const data = await response.json();
     contacts.value = data.message || [];
     console.log("Contacts fetched:", contacts.value);
   } catch (error) {
     console.error("Error fetching contacts:", error);
   }
-  // isLoading.value = false;
 };
 
 async function sendMessageOnContactClick(phone) {
@@ -52,11 +54,9 @@ async function sendMessageOnContactClick(phone) {
   try {
     const response = await createResource({
       url: "/api/method/frappe_whatsapp.api.whatsapp.send_message",
-      params: {
-        phone: phone,
-        message: "Hello! How can I assist you today?"
-      },
-      auto: false
+      params: { phone, message: "Hello! How can I assist you today?" },
+      auto: false,
+      headers: { 'X-Frappe-CSRF-Token': csrfToken }
     }).fetch();
     console.log("Message sent successfully!", response);
   } catch (error) {
@@ -71,7 +71,8 @@ async function resetMessageCount(phone) {
     await createResource({
       url: "/api/method/frappe_whatsapp.api.whatsapp.reset_unread_count",
       params: { phone },
-      auto: false
+      auto: false,
+      headers: { 'X-Frappe-CSRF-Token': csrfToken }
     }).fetch();
     console.log("Message count reset successfully for", phone);
   } catch (error) {
@@ -86,7 +87,8 @@ watch(selectedPhone, async (newPhone) => {
     const response = await createResource({
       url: '/api/method/frappe_whatsapp.api.whatsapp.get_whatsapp_messages',
       params: { phone: newPhone.number },
-      auto: false
+      auto: false,
+      headers: { 'X-Frappe-CSRF-Token': csrfToken }
     }).fetch();
 
     whatsappMessages.value = response.sort((a, b) => new Date(a.creation) - new Date(b.creation));
@@ -110,9 +112,7 @@ function sendTemplate(template) {
         template,
       },
       auto: true,
-      headers: {
-       
-      }
+      headers: { 'X-Frappe-CSRF-Token': csrfToken }
     }).then(() => {
       console.log('Template sent successfully!');
     });
@@ -121,13 +121,13 @@ function sendTemplate(template) {
   }
 }
 
-
 function fetchMessages() {
   if (!selectedPhone.value) return;
   createResource({
     url: '/api/method/frappe_whatsapp.api.whatsapp.get_whatsapp_messages',
     params: { phone: selectedPhone.value.number },
-    auto: true
+    auto: true,
+    headers: { 'X-Frappe-CSRF-Token': csrfToken }
   }).fetch().then((response) => {
     whatsappMessages.value = response.sort((a, b) => new Date(a.creation) - new Date(b.creation));
     console.log("Received messages:", whatsappMessages.value);
@@ -137,7 +137,6 @@ function fetchMessages() {
   });
 }
 
-// Scroll chat to bottom
 function scrollToBottom() {
   nextTick(() => {
     const el = document.querySelector('.messages-container');
@@ -145,18 +144,16 @@ function scrollToBottom() {
   });
 }
 
-// WebSocket listeners
 onMounted(() => {
   fetchContacts();
 
   $socket.on('oneinbox_whatsapp_message', (data) => {
-  if (selectedPhone.value && selectedPhone.value.number === data.from) {
-    whatsappMessages.value.push(data);
-    whatsappMessages.value.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-    nextTick(scrollToBottom);
-  }
-});
-
+    if (selectedPhone.value && selectedPhone.value.number === data.from) {
+      whatsappMessages.value.push(data);
+      whatsappMessages.value.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+      nextTick(scrollToBottom);
+    }
+  });
 
   $socket.on('whatsapp_contact_update', () => {
     user_update.value = true;
@@ -165,22 +162,21 @@ onMounted(() => {
 
   emitter.on('contact-selected', (data) => {
     console.log("Contact selected:", data);
-
     if (!selectedPhone.value || selectedPhone.value.number !== data.number) {
       selectedPhone.value = data;
     }
   });
+
   emitter.on("lead_submission_started", () => {
     isLoading.value = true;
   });
+
   emitter.on("lead_submission_completed", () => {
     isLoading.value = false;
     showAddLeadModal.value = false;
   });
 });
 
-
-// Cleanup WebSocket listeners
 onBeforeUnmount(() => {
   console.log("Component is being unmounted, removing event listeners.");
   $socket.off('whatsapp_message');

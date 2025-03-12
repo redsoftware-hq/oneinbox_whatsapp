@@ -14,8 +14,8 @@ frappe.ui.form.on('Whatsapp Lead Field Mapping', {
     lead_field_value: function(frm, cdt, cdn) {
         let row = locals[cdt][cdn];
 
-        if (frm.field_map && row.lead_field_value) {
-            row.doctype_field_type = frm.field_map[row.lead_field_value] || "Unknown";
+        if (frm.field_map && row.lead_field_name) {
+            row.doctype_field_type = frm.field_map[row.lead_field_name] || "Unknown";
             frm.refresh_field("whatsapp_lead_field_mapping");
         }
     }
@@ -55,7 +55,7 @@ function lead_map_field(frm) {
 
                 required_fields.forEach(fieldname => {
                     let child = frappe.model.add_child(frm.doc, "Whatsapp Lead Field Mapping", "whatsapp_lead_field_mapping");
-                    child.lead_field_value = fieldname;
+                    child.lead_field_name = fieldname;
                     child.doctype_field_type = field_map[fieldname] || "Unknown";
                     child.whatsapp_field = whatsapp_field_options[fieldname] || "";
                 });

@@ -67,9 +67,7 @@ export default {
       try {
         await fetch("/api/method/frappe_whatsapp.api.whatsapp.reset_unread_count", {
           method: "POST",
-          headers: { "Content-Type": "application/json" ,
-          "X-Frappe-CSRF-Token": window.frappe.csrf_token
-          },
+          headers: { "Content-Type": "application/json"},
           body: JSON.stringify({ phone }),
         });
       } catch (error) {

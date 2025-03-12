@@ -12,7 +12,6 @@ import { emitter } from './utils/eventBus';
 
 const app = getCurrentInstance();
 const { $socket } = app.appContext.config.globalProperties;
-const csrfToken = window.frappe ? window.frappe.csrf_token : '';
 
 const props = defineProps({
   doctype: String,
@@ -35,11 +34,12 @@ const whatsappMessages = ref([]);
 
 const fetchContacts = async () => {
   try {
-    const response = await fetch("/api/method/frappe_whatsapp.api.whatsapp.get_whatsapp_contact", {
-      headers: {
-        'X-Frappe-CSRF-Token': csrfToken
-      }
-    });
+    // const response = await fetch("/api/method/frappe_whatsapp.api.whatsapp.get_whatsapp_contact");
+    const response = await createResource({
+      url: "/api/method/frappe_whatsapp.api.whatsapp.get_whatsapp_contact",
+      auto: true,
+
+    })
     const data = await response.json();
     contacts.value = data.message || [];
     console.log("Contacts fetched:", contacts.value);
@@ -56,7 +56,6 @@ async function sendMessageOnContactClick(phone) {
       url: "/api/method/frappe_whatsapp.api.whatsapp.send_message",
       params: { phone, message: "Hello! How can I assist you today?" },
       auto: false,
-      headers: { 'X-Frappe-CSRF-Token': csrfToken }
     }).fetch();
     console.log("Message sent successfully!", response);
   } catch (error) {
@@ -72,7 +71,6 @@ async function resetMessageCount(phone) {
       url: "/api/method/frappe_whatsapp.api.whatsapp.reset_unread_count",
       params: { phone },
       auto: false,
-      headers: { 'X-Frappe-CSRF-Token': csrfToken }
     }).fetch();
     console.log("Message count reset successfully for", phone);
   } catch (error) {
@@ -88,7 +86,6 @@ watch(selectedPhone, async (newPhone) => {
       url: '/api/method/frappe_whatsapp.api.whatsapp.get_whatsapp_messages',
       params: { phone: newPhone.number },
       auto: false,
-      headers: { 'X-Frappe-CSRF-Token': csrfToken }
     }).fetch();
 
     whatsappMessages.value = response.sort((a, b) => new Date(a.creation) - new Date(b.creation));
@@ -112,7 +109,6 @@ function sendTemplate(template) {
         template,
       },
       auto: true,
-      headers: { 'X-Frappe-CSRF-Token': csrfToken }
     }).then(() => {
       console.log('Template sent successfully!');
     });
@@ -127,7 +123,6 @@ function fetchMessages() {
     url: '/api/method/frappe_whatsapp.api.whatsapp.get_whatsapp_messages',
     params: { phone: selectedPhone.value.number },
     auto: true,
-    headers: { 'X-Frappe-CSRF-Token': csrfToken }
   }).fetch().then((response) => {
     whatsappMessages.value = response.sort((a, b) => new Date(a.creation) - new Date(b.creation));
     console.log("Received messages:", whatsappMessages.value);

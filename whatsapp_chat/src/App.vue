@@ -14,7 +14,7 @@ const whatsapp = ref(null);
 const documentData = reactive({
   data: {}, // Initialize with an empty object
 });
-const loading = ref(true);
+const loading = ref(false);
 const error = ref('');
 
 // // Helper: Extract query parameters from URL

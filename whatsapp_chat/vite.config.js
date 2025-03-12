@@ -21,16 +21,10 @@ export default defineConfig({
           return html.replace(
             /<\/body>/,
             `
-            <script>
-            
-            if (!window.frappe) {
-              window.frappe = {}; 
-              }
-              window.frappe.csrf_token = '{{ frappe.session.csrf_token }}';
-            
-            for (let key in values) {
-            window.frappe[key] = values[key];
-            } 
+             <script>
+                {% for key in boot %}
+                window["{{ key }}"] = {{ boot[key] | tojson }};
+                {% endfor %}
             </script>
             </body>
             `

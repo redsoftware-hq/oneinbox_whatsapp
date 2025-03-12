@@ -109,15 +109,9 @@ function sendTextMessage(event) {
 }
 
 async function sendWhatsAppMessage() {
-  // if (!doc.value || !doc.value.name) {
-  //   console.error('doc.value is undefined or invalid', doc.value);
-  //   return;
-  // }
-   console.log(props.reply,"-------------------")
-  console.log("PROP PHONE value check")
   let args = {
-    reference_doctype: props.doctype,
-    reference_name: doc.value.name,
+    // reference_doctype: props.doctype,
+    // reference_name: doc.value.name,
     message: content.value,
     to: props.phone || doc.value.contact_number.replace(/\D/g, ""),
     attach: whatsapp.value.attach || '',
@@ -130,7 +124,7 @@ async function sendWhatsAppMessage() {
   whatsapp.value.content_type = 'text'
   reply.value = {}
   createResource({
-    url: '',
+    url: 'frappe_hfhg.api.whatsapp.create_whatsapp_message',
     params: args,
     auto: true,
     headers: {

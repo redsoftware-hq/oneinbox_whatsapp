@@ -35,14 +35,15 @@ const whatsappMessages = ref([]);
 const fetchContacts = async () => {
   try {
     // const response = await fetch("/api/method/frappe_whatsapp.api.whatsapp.get_whatsapp_contact");
-    const response = await createResource({
+    createResource({
       url: "/api/method/frappe_whatsapp.api.whatsapp.get_whatsapp_contact",
       auto: true,
-
+    }).fetch().then((res) => {
+      contacts.value = res 
+      console.log("Contacts fetched:", contacts.value);
     })
     // const data = response
-    contacts.value = response
-    console.log("Contacts fetched:", contacts.value);
+    // contacts.value = response
   } catch (error) {
     console.error("Error fetching contacts:", error);
   }

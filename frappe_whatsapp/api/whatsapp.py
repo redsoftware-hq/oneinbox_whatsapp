@@ -246,6 +246,7 @@ def get_whatsapp_contact(start=0, page_length=20):
     start = int(start)
     page_length = int(page_length)
 
+
     whatsapp_contacts = frappe.get_all(
         "WhatsApp Contact",
         fields=[
@@ -417,5 +418,3 @@ def emit_user_update_event(doc, method=None):
         frappe.logger().error(f"Error Emitting User Update Event: {frappe.get_traceback()}")
         frappe.log_error("Error Emitting User Update Event", frappe.get_traceback())
 
-    
-    

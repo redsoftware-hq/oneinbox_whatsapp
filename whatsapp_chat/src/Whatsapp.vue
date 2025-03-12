@@ -24,78 +24,94 @@ const props = defineProps({
   }
 });
 
-const contacts = ref([]);
+// const contacts = ref([]);
 const selectedPhone = ref(null);
 const showWhatsappTemplates = ref(false);
 const showAddLeadModal = ref(false);
 const isLoading = ref(false);
 const user_update = ref(false);
-const whatsappMessages = ref([]);
+// const whatsappMessages = ref([]);
 
-const fetchContacts = async () => {
-  try {
+// const fetchContacts = async () => {
+//   try {
     // const response = await fetch("/api/method/frappe_whatsapp.api.whatsapp.get_whatsapp_contact");
-    createResource({
+const WhatsappContacts = createResource({
       url: "/api/method/frappe_whatsapp.api.whatsapp.get_whatsapp_contact",
       auto: true,
-    }).fetch().then((res) => {
-      contacts.value = res 
-      console.log("Contacts fetched:", contacts.value);
     })
+    // .fetch().then((res) => {
+    //   contacts.value = res 
+    //   console.log("Contacts fetched:", contacts.value);
+    // })
     // const data = response
     // contacts.value = response
-  } catch (error) {
-    console.error("Error fetching contacts:", error);
-  }
-};
+  // } catch (error) {
+    // console.error("Error fetching contacts:", error);
+  // }
+// };
 
-async function sendMessageOnContactClick(phone) {
-  if (!phone) return;
+// async function sendMessageOnContactClick(phone) {
+//   if (!phone) return;
 
-  try {
-    const response = await createResource({
-      url: "/api/method/frappe_whatsapp.api.whatsapp.send_message",
-      params: { phone, message: "Hello! How can I assist you today?" },
-      auto: false,
-    }).fetch();
-    console.log("Message sent successfully!", response);
-  } catch (error) {
-    console.error("Error sending message:", error);
-  }
-}
+//   try {
+//     const response = await createResource({
+//       url: "/api/method/frappe_whatsapp.api.whatsapp.send_message",
+//       params: { phone, message: "Hello! How can I assist you today?" },
+//       auto: false,
+//     }).fetch();
+//     console.log("Message sent successfully!", response);
+//   } catch (error) {
+//     console.error("Error sending message:", error);
+//   }
+// }
 
-async function resetMessageCount(phone) {
-  if (!phone) return;
+// async function resetMessageCount(phone) {
+//   if (!phone) return;
 
-  try {
-    await createResource({
-      url: "/api/method/frappe_whatsapp.api.whatsapp.reset_unread_count",
-      params: { phone },
-      auto: false,
-    }).fetch();
-    console.log("Message count reset successfully for", phone);
-  } catch (error) {
-    console.error("Error resetting message count:", error);
-  }
-}
+//   try {
+//     await createResource({
+//       url: "/api/method/frappe_whatsapp.api.whatsapp.reset_unread_count",
+//       params: { phone },
+//       auto: false,
+//     }).fetch();
+//     console.log("Message count reset successfully for", phone);
+//   } catch (error) {
+//     console.error("Error resetting message count:", error);
+//   }
+// }
 
-watch(selectedPhone, async (newPhone) => {
-  if (!newPhone) return;
+// watch(selectedPhone, async (newPhone) => {
+//   if (!newPhone) return;
   
-  try {
-    const response = await createResource({
-      url: '/api/method/frappe_whatsapp.api.whatsapp.get_whatsapp_messages',
-      params: { phone: newPhone.number },
-      auto: false,
-    }).fetch();
+//   try {
+//     const response = await createResource({
+//       url: '/api/method/frappe_whatsapp.api.whatsapp.get_whatsapp_messages',
+//       params: { phone: newPhone.number },
+//       auto: false,
+//     }).fetch();
 
-    whatsappMessages.value = response.sort((a, b) => new Date(a.creation) - new Date(b.creation));
-    console.log("Received messages:", whatsappMessages.value);
-    resetMessageCount(newPhone.number);
-    scrollToBottom();
-  } catch (error) {
-    console.error("Error fetching messages:", error);
-  }
+//     whatsappMessages.value = response.sort((a, b) => new Date(a.creation) - new Date(b.creation));
+//     console.log("Received messages:", whatsappMessages.value);
+//     resetMessageCount(newPhone.number);
+//     scrollToBottom();
+//   } catch (error) {
+//     console.error("Error fetching messages:", error);
+//   }
+// });
+
+const whatsappMessages = createResource({
+  url: 'frappe_hfhg.api.whatsapp.get_whatsapp_messages',
+  cache: ['whatsapp_messages', props.phone],
+  params: {
+    // reference_doctype: props.doctype,
+    // reference_name: props.docname,
+    phone: selectedPhone.value
+  },
+  auto: true,
+  // headers: {
+  //   'X-Frappe-CSRF-Token': frappe.csrf_token
+  // },
+  transform: (data) => data.sort((a, b) => new Date(a.creation) - new Date(b.creation)),
 });
 
 function sendTemplate(template) {
@@ -118,20 +134,20 @@ function sendTemplate(template) {
   }
 }
 
-function fetchMessages() {
-  if (!selectedPhone.value) return;
-  createResource({
-    url: '/api/method/frappe_whatsapp.api.whatsapp.get_whatsapp_messages',
-    params: { phone: selectedPhone.value.number },
-    auto: true,
-  }).fetch().then((response) => {
-    whatsappMessages.value = response.sort((a, b) => new Date(a.creation) - new Date(b.creation));
-    console.log("Received messages:", whatsappMessages.value);
-    scrollToBottom();
-  }).catch((error) => {
-    console.error("Error fetching messages:", error);
-  });
-}
+// function fetchMessages() {
+//   if (!selectedPhone.value) return;
+//   createResource({
+//     url: '/api/method/frappe_whatsapp.api.whatsapp.get_whatsapp_messages',
+//     params: { phone: selectedPhone.value.number },
+//     auto: true,
+//   }).fetch().then((response) => {
+//     whatsappMessages.value = response.sort((a, b) => new Date(a.creation) - new Date(b.creation));
+//     console.log("Received messages:", whatsappMessages.value);
+//     scrollToBottom();
+//   }).catch((error) => {
+//     console.error("Error fetching messages:", error);
+//   });
+// }
 
 function scrollToBottom() {
   nextTick(() => {
@@ -140,22 +156,29 @@ function scrollToBottom() {
   });
 }
 
+watch(whatsappMessages.data, () => {
+  nextTick(scrollToBottom);
+});
+
 onMounted(() => {
-  fetchContacts();
+  // fetchContacts();
 
   $socket.on('oneinbox_whatsapp_message', (data) => {
-    if (selectedPhone.value && selectedPhone.value.number === data.from) {
-      whatsappMessages.value.push(data);
-      whatsappMessages.value.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-      nextTick(scrollToBottom);
+    if (selectedPhone.value && selectedPhone.value.number === data.from || data.to) {
+      // whatsappMessages.value.push(data);
+      // whatsappMessages.value.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+      whatsappMessages.reload()
+      // nextTick(scrollToBottom);
     }
   });
   $socket.on('lead_submission_completed', () => {
-    fetchContacts()
+    // fetchContacts()
+    WhatsappContacts.reload()
   });
   $socket.on('whatsapp_contact_update', () => {
     user_update.value = true;
-    fetchContacts();
+    WhatsappContacts.reload()
+    // fetchContacts();
   });
 
   emitter.on('contact-selected', (data) => {
@@ -196,7 +219,7 @@ onBeforeUnmount(() => {
 
     <div class="flex h-screen overflow-hidden">
       <div class="w-1/5">
-        <WhatsappSidebar :contacts="contacts" :user_update="user_update" :socket="$socket" />
+        <WhatsappSidebar :contacts="WhatsappContacts.data" :user_update="user_update" :socket="$socket" />
       </div>
 
       <div class="whatsapp-chat-container h-screen w-full flex-col">
@@ -215,21 +238,30 @@ onBeforeUnmount(() => {
           <span>Click Any Contact To View Conversation</span>
         </div>
 
-        <div v-else-if="selectedPhone && whatsappMessages.length === 0" class="flex flex-1 flex-col items-center justify-center gap-3 text-xl font-medium text-gray-500">
+        <div v-else-if="selectedPhone && !whatsappMessages.data?.length" class="flex flex-1 flex-col items-center justify-center gap-3 text-xl font-medium text-gray-500">
           <WhatsAppIcon class="h-10 w-10 text-gray-500" />
           <span>No messages yet</span>
         </div>
 
         <div v-else class="messages-container flex-1 p-4 overflow-y-auto">
-          <WhatsAppArea class="px-3 sm:px-10" :messages="whatsappMessages" />
+          <WhatsAppArea class="px-3 sm:px-10" :messages="whatsappMessages.data" />
         </div>
 
         <div class="chat-box-container border-t-gray-100 mb-16">
-          <WhatsAppBox v-if="selectedPhone" :doctype="props.doctype" :docname="props.docname" :phone="selectedPhone?.number" @message-sent="fetchMessages" />
+          <WhatsAppBox v-if="selectedPhone"
+            :doctype="props.doctype"
+            :docname="props.docname"
+            :phone="selectedPhone?.number"
+            @message-sent="whatsappMessages.reload"
+          />
         </div>
 
         <WhatsappTemplateSelectorModal v-model="showWhatsappTemplates" :doctype="doctype" @send="(t) => sendTemplate(t)"/>
-        <WhatappAddToLeadModal v-model="showAddLeadModal" :first_name="selectedPhone?.name || ''" :contact_number="selectedPhone?.number || ''" :isLoading="isLoading"/>
+        <WhatappAddToLeadModal
+          v-model="showAddLeadModal"
+          :first_name="selectedPhone?.name || ''"
+          :contact_number="selectedPhone?.number || ''"
+          :isLoading="isLoading"/>
       </div>
     </div>
   </div>

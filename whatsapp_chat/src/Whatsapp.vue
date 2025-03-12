@@ -154,7 +154,9 @@ onMounted(() => {
       nextTick(scrollToBottom);
     }
   });
-
+  $socket.on('lead_submission_completed', () => {
+    fetchContacts()
+  });
   $socket.on('whatsapp_contact_update', () => {
     user_update.value = true;
     fetchContacts();

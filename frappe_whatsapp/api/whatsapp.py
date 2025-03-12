@@ -242,10 +242,11 @@ def get_from_name(message):
 
 
 @frappe.whitelist()
-def get_whatsapp_contact(start=0, page_length=20):
+def get_whatsapp_contact(search=None, start=0, page_length=20):
     start = int(start)
     page_length = int(page_length)
 
+    # check search and filter contacts.
 
     whatsapp_contacts = frappe.get_all(
         "WhatsApp Contact",
@@ -254,9 +255,7 @@ def get_whatsapp_contact(start=0, page_length=20):
             "whatsapp_name",
             "unread_message_count",
             "last_message_time",
-            "discard",
             "is_lead",
-            "marketing_opt_in"
         ],
         filters={"is_lead": 0},
         start=start,

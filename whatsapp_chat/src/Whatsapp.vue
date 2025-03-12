@@ -40,8 +40,8 @@ const fetchContacts = async () => {
       auto: true,
 
     })
-    const data = await response.json();
-    contacts.value = data.message || [];
+    // const data = response
+    contacts.value = response
     console.log("Contacts fetched:", contacts.value);
   } catch (error) {
     console.error("Error fetching contacts:", error);
@@ -176,7 +176,7 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   console.log("Component is being unmounted, removing event listeners.");
-  $socket.off('whatsapp_message');
+  $socket.off('oneinbox_whatsapp_message');
   $socket.off('whatsapp_contact_update');
 });
 </script>

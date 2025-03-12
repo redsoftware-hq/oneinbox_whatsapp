@@ -29,7 +29,7 @@
 </template>
 
 <script setup>
-import { ref, watchEffect, defineProps, defineEmits } from "vue";
+import { ref, watchEffect, defineProps } from "vue";
 import { FormControl, createResource } from "frappe-ui";
 import { toRaw } from "vue";
 import { emitter } from "../utils/eventBus";
@@ -40,20 +40,20 @@ const props = defineProps({
   showAddLeadModal: Boolean, // Parent controls this
 });
 
-// const emit = defineEmits(["update:showAddLeadModal"]); // Allows v-model usage
-
-
 const show = ref(props.showAddLeadModal);
 const responseMessage = ref("");
+const csrfToken = ref(window.frappe.csrf_token || ""); // Fetch CSRF token
 
 const fieldMappingsResource = createResource({
   url: "/api/method/frappe_whatsapp.api.whatsapp.get_leadmapping_fields",
   auto: true,
+  headers: { "X-Frappe-CSRF-Token": csrfToken.value }, // Include CSRF token
 });
 
 const formDataResource = createResource({
   url: "/api/method/frappe_whatsapp.api.whatsapp.get_form_data",
   auto: true,
+  headers: { "X-Frappe-CSRF-Token": csrfToken.value }, // Include CSRF token
 });
 
 const executiveOptions = ref([]);
@@ -70,7 +70,6 @@ watchEffect(() => {
 // Close dialog properly
 const closeDialog = () => {
   show.value = false;
-  // emit("update:showAddLeadModal", false);
 };
 
 // Fetch and set field data
@@ -140,25 +139,22 @@ const submitLead = async () => {
     const response = await fetch("/api/method/frappe_whatsapp.api.whatsapp.save_as_lead", {
       headers: {
         'Accept': 'application/json',
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'X-Frappe-CSRF-Token': csrfToken.value // CSRF token added
       },
       method: "POST",
       body: JSON.stringify({ doctype, data: leadData }),
     });
 
     const result = await response.json();
-    if(result.message.status === "error") {
+    if (result.message.status === "error") {
       responseMessage.value = result.message;
       return;
-    }
-    else if(result.message.status === "success") {
+    } else if (result.message.status === "success") {
       emitter.emit("lead_submission_completed", lead.value);
-    }
-
-    else {
+    } else {
       responseMessage.value = "Error submitting lead.";
     }
-    // closeDialog(); // Close modal on success
   } catch (error) {
     console.error("Error submitting lead:", error);
   }

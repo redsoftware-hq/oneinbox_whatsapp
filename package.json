@@ -7,7 +7,7 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "postinstall": "cd whatsapp_chat && yarn install",
     "dev": "cd whatsapp_chat && yarn dev",
-    "build": "cd whatsapp_chat && yarn build"
+    "build": "cd whatsapp_chat && yarn install && yarn build"
   },
   "keywords": [],
   "author": "",

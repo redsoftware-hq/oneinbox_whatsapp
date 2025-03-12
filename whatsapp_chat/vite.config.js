@@ -22,11 +22,15 @@ export default defineConfig({
             /<\/body>/,
             `
             <script>
-                if (window.frappe && frappe.boot) {
-                    Object.keys(frappe.boot).forEach(key => {
-                        window[key] = frappe.boot[key];
-                    });
-                }
+            
+            if (!window.frappe) {
+              window.frappe = {}; 
+              }
+              window.frappe.csrf_token = '{{ frappe.session.csrf_token }}';
+            
+            for (let key in values) {
+            window.frappe[key] = values[key];
+            } 
             </script>
             </body>
             `

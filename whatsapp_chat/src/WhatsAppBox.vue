@@ -84,6 +84,7 @@ import IconPicker from './components/IconPicker.vue';
 import SmileIcon from './components/Icons/SmileIcon.vue';
 import { createResource, Textarea, FileUploader, Dropdown } from 'frappe-ui';
 import { ref, nextTick, watch, defineModel } from 'vue';
+const csrfToken = window.frappe ? window.frappe.csrf_token : '';
 
 // Define properties and refs
 const props = defineProps({
@@ -152,7 +153,7 @@ async function sendWhatsAppMessage() {
     url: '/api/method/frappe_whatsapp.api.whatsapp.create_whatsapp_message',
     params: args,
     auto: true,
-    headers: {},
+    headers: { 'X-Frappe-CSRF-Token': csrfToken }
   }).fetch().then((response) => {
     console.log('Message sent successfully!', response);
   }).catch((error) => {

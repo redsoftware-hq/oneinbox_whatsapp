@@ -47,7 +47,7 @@
 import { Badge } from "frappe-ui";
 import { format, isToday, isYesterday } from "date-fns";
 import { emitter } from "./utils/eventBus.js";
-import { ref, computed, watch } from "vue";
+import { ref, computed, watch, onMounted } from "vue"; // ✅ Added missing import
 
 export default {
   name: "WhatsappSidebar",
@@ -89,7 +89,6 @@ export default {
     });
 
     const selectContact = (contact) => {
-      
       selectedContact.value = contact.phone;
       resetMessageCount(selectedContact.value);
 
@@ -97,7 +96,7 @@ export default {
         number: contact.phone,
         name: contact.whatsapp_name,
       });
-      
+
       localStorage.setItem("selectedContact", JSON.stringify(contact));
       emitter.emit("contact-selected-refresh");
     };
@@ -105,14 +104,12 @@ export default {
     // Watch for prop updates
     watch(() => props.contacts, (newContacts) => {
       contacts.value = newContacts;
-      console.log("Contacts updated:", newContacts);
     });
 
     // Real-time updates from socket
     if (props.socket) {
       props.socket.on("contacts_updated", (newContacts) => {
         contacts.value = newContacts;
-        console.log("Contacts updated in real-time:", newContacts);
       });
     }
 
@@ -135,6 +132,17 @@ export default {
       return formattedTime;
     };
 
+    // onMounted(async () => {
+    //   if (props.socket) { // ✅ Fixed the incorrect `$socket` reference
+    //     props.socket.on("whatsapp_contact_update", async (data) => {
+
+    //       if (selectedContact.value && selectedContact.value === data.phone) {
+    //         resetMessageCount(selectedContact.value);
+    //       }
+    //     });
+    //   }
+    // });
+
     return {
       search,
       selectedContact,
@@ -145,3 +153,4 @@ export default {
   },
 };
 </script>
+

@@ -271,7 +271,7 @@ def save_as_lead(data, doctype):
 
         if isinstance(data, str):
             data = json.loads(data)
-            
+        variation=None
         lead_doc_meta = frappe.get_meta(doctype)
         if not lead_doc_meta:
             return {"status": "error", "message": f"{doctype} Doctype not found"}
@@ -315,7 +315,6 @@ def save_as_lead(data, doctype):
         doc = frappe.get_doc({"doctype": doctype, **data})
         doc.insert(ignore_permissions=True)
 
-        phone_variants = [contact_number, contact_number.replace("+91-", "")]
 
         query = """
             UPDATE `tabWhatsApp Contact`

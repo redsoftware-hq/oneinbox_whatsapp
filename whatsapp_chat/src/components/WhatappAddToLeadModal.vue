@@ -131,6 +131,7 @@ const submitLead = async () => {
     if (result.message.status === "success") {
       emitter.emit("lead_submission_process_completed", lead.value);
     } else {
+      emitter.emit("lead_submission_process_error", lead.value);
       console.error("Error submitting lead:", result.message);
     }
   } catch (error) {

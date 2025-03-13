@@ -45,7 +45,21 @@ const fetchContacts = async () => {
     console.error("Error fetching contacts:", error);
   }
 };
-
+const resetMessageCount = async (phone) => {
+      if (!phone) return;
+      try {
+        await fetch("/api/method/frappe_whatsapp.api.whatsapp.reset_unread_count", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Frappe-CSRF-Token": window.frappe.csrf_token,
+          },
+          body: JSON.stringify({ phone }),
+        });
+      } catch (error) {
+        console.error("Error resetting message count:", error);
+      }
+    };
 
 
 // ✅ Fetch messages in real-time
@@ -53,35 +67,40 @@ const fetchMessages = async () => {
   if (!selectedPhone.value) return;
   
   try {
-    const response = await createResource({
-      url: '/api/method/frappe_whatsapp.api.whatsapp.get_whatsapp_messages',
-      params: { phone: selectedPhone.value.number },
-      auto: true,
-      headers: { 'X-Frappe-CSRF-Token': csrfToken }
-    })
-
-    whatsappMessages.value = response.sort((a, b) => new Date(a.creation) - new Date(b.creation));
-    scrollToBottom();
-  } catch (error) {
-    console.error("Error fetching messages:", error);
-  }
+     const response = await createResource({
+       url: '/api/method/frappe_whatsapp.api.whatsapp.get_whatsapp_messages',
+       params: { phone: selectedPhone.value.number },
+       auto: false,
+       headers: {
+        'X-Frappe-CSRF-Token': frappe.csrf_token
+      }
+     }).fetch();
+ 
+     whatsappMessages.value = response.sort((a, b) => new Date(a.creation) - new Date(b.creation));
+     resetMessageCount(selectedPhone.value.number);
+     scrollToBottom();
+   } catch (error) {
+     console.error("Error fetching messages:", error);
+   }
 };
-function sendTemplate(template) {
+async function sendTemplate(template) {
   showWhatsappTemplates.value = false;
   try {
-    createResource({
+    const response=await createResource({
       url: 'frappe_whatsapp.api.whatsapp.send_whatsapp_template',
       params: {
-        to: props.phone,
+        to: selectedPhone.value.number,
         template,
       },
       auto: true,
       headers: {
         'X-Frappe-CSRF-Token': frappe.csrf_token
       }
-    }).then(() => {
+    }).fetch()
+
+    if (response)
       console.log('Template sent successfully!');
-    });
+   
   } catch (error) {
     console.error('Error sending template:', error);
   }
@@ -99,7 +118,6 @@ onMounted(async () => {
     });
 
     const data = await response.json();
-    console.log("API Response:", data);
     isMappingSet.value = data.message.set_status;
   } catch (error) {
     console.error("Error fetching API:", error);
@@ -118,12 +136,12 @@ onMounted(async () => {
     $socket.on('whatsapp_contact_update', async (data) => {
     await fetchContacts();
 
-    if (selectedPhone.value && selectedPhone.value.number === data.from) {
+    if (selectedPhone.value && selectedPhone.value.number === data.phone) {
+      
         return;
     }
     
 
-    // Find the correct index using === instead of !==
     const index = contacts.value.findIndex(contact => contact.phone === data.phone);
 
     if (index !== -1) {
@@ -141,6 +159,7 @@ $socket.onAny((event, data) => {
     });
   }
   emitter.on('lead_submission_started', ()=>isLoading.value = true);
+  emitter.on('lead_submission_process_error', ()=>isLoading.value = false);
 
   emitter.on('lead_submission_process_completed', ()=>{isLoading.value = false,window.location.reload()});
   emitter.on('contact-selected', (data) => {

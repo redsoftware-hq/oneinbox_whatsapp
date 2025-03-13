@@ -56,6 +56,8 @@
 import { TextEditor, createListResource } from 'frappe-ui'
 import { ref, computed, nextTick, watch, onMounted, defineModel } from 'vue'
 
+const csrfToken = computed(() => window.frappe?.csrf_token || '');
+
 const props = defineProps({
   doctype: String,
 })
@@ -75,13 +77,14 @@ const templates = createListResource({
   filters: { status: 'APPROVED', for_doctype: ['in', [props.doctype, '']] },
   orderBy: 'modified desc',
   pageLength: 99999,
-  headers: {
-    }
+  headers: { 'X-Frappe-CSRF-Token': csrfToken }
 })
 
 onMounted(() => {
   if (templates.data == null) {
-    templates.fetch()
+    templates.fetch(
+      {headers: { 'X-Frappe-CSRF-Token': csrfToken }}
+    )
   }
 })
 

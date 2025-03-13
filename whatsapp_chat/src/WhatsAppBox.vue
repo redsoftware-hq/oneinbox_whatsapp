@@ -1,7 +1,7 @@
 <template>
   <div
     v-if="reply?.message"
-    class="flex items-center justify-around gap-2 px-3 pt-2 sm:px-10 "
+    class="flex items-center justify-around gap-2 px-3 pt-2 sm:px-10"
   >
     <div
       class="mb-1 ml-13 flex-1 cursor-pointer rounded border-0 border-l-4 border-green-500 bg-gray-100 p-2 text-base text-gray-600"
@@ -77,7 +77,6 @@ const props = defineProps({
   doctype: String,
   docname: String,
   phone: String,
-  reply: Object,
 })
 
 const doc = defineModel('doc')
@@ -109,35 +108,35 @@ function sendTextMessage(event) {
 }
 
 async function sendWhatsAppMessage() {
-  // if (!doc.value || !doc.value.name) {
-  //   console.error('doc.value is undefined or invalid', doc.value);
-  //   return;
-  // }
-   console.log(props.reply,"-------------------")
-  console.log("PROP PHONE value check")
+  console.log("PROP PHONE value check", content.value, "--------------------");
+
   let args = {
-    reference_doctype: props.doctype,
-    reference_name: doc.value.name,
     message: content.value,
     to: props.phone || doc.value.contact_number.replace(/\D/g, ""),
-    attach: whatsapp.value.attach || '',
-    reply_to: reply.value?.name || '',
-    content_type: whatsapp.value.content_type,
+    attach: whatsapp?.value?.attach || '',
+    reply_to: reply?.value?.name || '',
+    content_type: whatsapp?.value?.content_type,
+  };
+
+  // Fix: Ensure variables exist before assignment
+  if (content) content.value = '';
+  if (fileType) fileType.value = '';
+  if (whatsapp.value) {
+    whatsapp.value.attach = '';
+    whatsapp.value.content_type = 'text';
   }
-  content.value = ''
-  fileType.value = ''
-  whatsapp.value.attach = ''
-  whatsapp.value.content_type = 'text'
-  reply.value = {}
+  if (reply) reply.value = {};
+
   createResource({
-    url: '',
+    url: 'frappe_whatsapp.api.whatsapp.create_whatsapp_message',
     params: args,
     auto: true,
     headers: {
-      
+      'X-Frappe-CSRF-Token': window.frappe.csrf_token || frappe.csrf_token || window.csrf_token,
     }
-  })
+  });
 }
+
 
 function uploadOptions(openFileSelector) {
   return [
@@ -175,6 +174,4 @@ watch(reply, (value) => {
 })
 
 defineExpose({ show })
-
-
 </script>

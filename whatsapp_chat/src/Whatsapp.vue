@@ -12,7 +12,7 @@ import { emitter } from './utils/eventBus';
 
 const app = getCurrentInstance();
 const { $socket } = app.appContext.config.globalProperties;
-const csrfToken = window.frappe ? window.frappe.csrf_token : '';
+const csrfToken = window? window.csrf_token : '';
 
 const props = defineProps({
   doctype: String,
@@ -30,181 +30,171 @@ const selectedPhone = ref(null);
 const showWhatsappTemplates = ref(false);
 const showAddLeadModal = ref(false);
 const isLoading = ref(false);
-const whatsappMessages = ref([]);
 const user_update = ref(false);
-const isMappingSet = ref(false);
+const whatsappMessages = ref([]);
 
 const fetchContacts = async () => {
   try {
     const response = await fetch("/api/method/frappe_whatsapp.api.whatsapp.get_whatsapp_contact", {
-      headers: { 'X-Frappe-CSRF-Token': csrfToken }
+      headers: {
+        'X-Frappe-CSRF-Token': csrfToken
+      }
     });
     const data = await response.json();
     contacts.value = data.message || [];
+    console.log("Contacts fetched:", contacts.value);
   } catch (error) {
     console.error("Error fetching contacts:", error);
   }
 };
-const resetMessageCount = async (phone) => {
-      if (!phone) return;
-      try {
-        await fetch("/api/method/frappe_whatsapp.api.whatsapp.reset_unread_count", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "X-Frappe-CSRF-Token": window.frappe.csrf_token,
-          },
-          body: JSON.stringify({ phone }),
-        });
-      } catch (error) {
-        console.error("Error resetting message count:", error);
-      }
-    };
 
+async function sendMessageOnContactClick(phone) {
+  if (!phone) return;
 
-// ✅ Fetch messages in real-time
-const fetchMessages = async () => {
-  if (!selectedPhone.value) return;
+  try {
+    const response = await createResource({
+      url: "/api/method/frappe_whatsapp.api.whatsapp.send_message",
+      params: { phone, message: "Hello! How can I assist you today?" },
+      auto: false,
+      headers: { 'X-Frappe-CSRF-Token': csrfToken }
+    }).fetch();
+    console.log("Message sent successfully!", response);
+  } catch (error) {
+    console.error("Error sending message:", error);
+  }
+}
+
+async function resetMessageCount(phone) {
+  if (!phone) return;
+
+  try {
+    await createResource({
+      url: "/api/method/frappe_whatsapp.api.whatsapp.reset_unread_count",
+      params: { phone },
+      auto: false,
+      headers: { 'X-Frappe-CSRF-Token': csrfToken }
+    }).fetch();
+    console.log("Message count reset successfully for", phone);
+  } catch (error) {
+    console.error("Error resetting message count:", error);
+  }
+}
+
+watch(selectedPhone, async (newPhone) => {
+  if (!newPhone) return;
   
   try {
-     const response = await createResource({
-       url: '/api/method/frappe_whatsapp.api.whatsapp.get_whatsapp_messages',
-       params: { phone: selectedPhone.value.number },
-       auto: false,
-       headers: {
-        'X-Frappe-CSRF-Token': frappe.csrf_token
-      }
-     }).fetch();
- 
-     whatsappMessages.value = response.sort((a, b) => new Date(a.creation) - new Date(b.creation));
-     resetMessageCount(selectedPhone.value.number);
-     scrollToBottom();
-   } catch (error) {
-     console.error("Error fetching messages:", error);
-   }
-};
-async function sendTemplate(template) {
+    const response = await createResource({
+      url: '/api/method/frappe_whatsapp.api.whatsapp.get_whatsapp_messages',
+      params: { phone: newPhone.number },
+      auto: false,
+      headers: { 'X-Frappe-CSRF-Token': csrfToken }
+    }).fetch();
+
+    whatsappMessages.value = response.sort((a, b) => new Date(a.creation) - new Date(b.creation));
+    console.log("Received messages:", whatsappMessages.value);
+    resetMessageCount(newPhone.number);
+    scrollToBottom();
+  } catch (error) {
+    console.error("Error fetching messages:", error);
+  }
+});
+
+function sendTemplate(template) {
   showWhatsappTemplates.value = false;
   try {
-    const response=await createResource({
+    createResource({
       url: 'frappe_whatsapp.api.whatsapp.send_whatsapp_template',
       params: {
-        to: selectedPhone.value.number,
+        reference_doctype: props.doctype,
+        reference_name: props.docname,
+        to: props.phone,
         template,
       },
       auto: true,
-      headers: {
-        'X-Frappe-CSRF-Token': frappe.csrf_token
-      }
-    }).fetch()
-
-    if (response)
+      headers: { 'X-Frappe-CSRF-Token': csrfToken }
+    }).then(() => {
       console.log('Template sent successfully!');
-   
+    });
   } catch (error) {
     console.error('Error sending template:', error);
   }
 }
 
-
-onMounted(async () => {
-  try {
-    const response = await fetch('/api/method/frappe_whatsapp.api.whatsapp.is_mapping_set', {
-      method: 'GET',
-      headers: {
-        'X-Frappe-CSRF-Token': window.frappe ? window.frappe.csrf_token : '',
-        'Content-Type': 'application/json',
-      },
-    });
-
-    const data = await response.json();
-    isMappingSet.value = data.message.set_status;
-  } catch (error) {
-    console.error("Error fetching API:", error);
-  }
-  fetchContacts();
-
-  if ($socket) {
-    $socket.on('oneinbox_whatsapp_message', (data) => {
-      if (selectedPhone.value && selectedPhone.value.number === data.from) {
-        whatsappMessages.value.push(data);
-        whatsappMessages.value.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-        nextTick(scrollToBottom);
-      }
-    });
-
-    $socket.on('whatsapp_contact_update', async (data) => {
-    await fetchContacts();
-
-    if (selectedPhone.value && selectedPhone.value.number === data.phone) {
-      
-        return;
-    }
-    
-
-    const index = contacts.value.findIndex(contact => contact.phone === data.phone);
-
-    if (index !== -1) {
-        contacts.value.splice(index, 1, { ...contacts.value[index], ...data });
-    } else {
-        contacts.value.push(data);
-    }
-});
-
-
-$socket.onAny((event, data) => {
-});
-    $socket.on('lead_submission_completed', async () => {
-      await fetchContacts();
-    });
-  }
-  emitter.on('lead_submission_started', ()=>isLoading.value = true);
-  emitter.on('lead_submission_process_error', ()=>isLoading.value = false);
-
-  emitter.on('lead_submission_process_completed', ()=>{isLoading.value = false,window.location.reload()});
-  emitter.on('contact-selected', (data) => {
-    if (!selectedPhone.value || selectedPhone.value.number !== data.number) {
-      selectedPhone.value = data;
-      fetchMessages(); // ✅ Fetch messages immediately on selection
-    }
+function fetchMessages() {
+  if (!selectedPhone.value) return;
+  createResource({
+    url: '/api/method/frappe_whatsapp.api.whatsapp.get_whatsapp_messages',
+    params: { phone: selectedPhone.value.number },
+    auto: true,
+    headers: { 'X-Frappe-CSRF-Token': csrfToken }
+  }).fetch().then((response) => {
+    whatsappMessages.value = response.sort((a, b) => new Date(a.creation) - new Date(b.creation));
+    console.log("Received messages:", whatsappMessages.value);
+    scrollToBottom();
+  }).catch((error) => {
+    console.error("Error fetching messages:", error);
   });
-});
+}
 
-// ✅ Ensure smooth scrolling on new messages
-const scrollToBottom = () => {
+function scrollToBottom() {
   nextTick(() => {
     const el = document.querySelector('.messages-container');
     if (el) el.scrollTop = el.scrollHeight;
   });
-};
+}
 
-// ✅ Cleanup WebSocket listeners
+onMounted(() => {
+  fetchContacts();
+
+  $socket.on('oneinbox_whatsapp_message', (data) => {
+    if (selectedPhone.value && selectedPhone.value.number === data.from) {
+      whatsappMessages.value.push(data);
+      whatsappMessages.value.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+      nextTick(scrollToBottom);
+    }
+  });
+  emitter.on('lead_submission_completed', () => {
+    fetchContacts()
+  });
+  $socket.on('whatsapp_contact_update', () => {
+    user_update.value = true;
+    fetchContacts();
+  });
+
+  emitter.on('contact-selected', (data) => {
+    console.log("Contact selected:", data);
+    if (!selectedPhone.value || selectedPhone.value.number !== data.number) {
+      selectedPhone.value = data;
+    }
+  });
+
+  emitter.on("lead_submission_started", () => {
+    isLoading.value = true;
+  });
+
+  emitter.on("lead_submission_completed", () => {
+    isLoading.value = false;
+    showAddLeadModal.value = false;
+  });
+});
+
 onBeforeUnmount(() => {
-  if ($socket) {
-    $socket.off('oneinbox_whatsapp_message');
-    $socket.off('whatsapp_contact_update');
-    $socket.off('lead_submission_completed');
-  }
+  console.log("Component is being unmounted, removing event listeners.");
+  $socket.off('whatsapp_message');
+  $socket.off('whatsapp_contact_update');
 });
 </script>
-
 
 <template>
   <div class="flex h-4/5 flex-col scroll " :class="{ 'splash-screen': isLoading }">
     <div class="top-bar flex p-3 bg-white">
-      <div class="flex column  w-full">
-        <div class="flex column gap-5 w-full">
+      <div class="flex column gap-5 w-full">
          <a href="/app" class="text-2xl">←</a>
         <div class="flex gap-2 items-center">
           <WhatsAppIcon class="h-8 w-8 text-gray-500" />
           <h1>Whatsapp</h1>
         </div>
-      </div>
-      <h1 class="w-full text-red-500" v-if="!isMappingSet">
-  Lead Mapping is Not Configured Yet
-</h1>
-
-
       </div>
     </div>
 
@@ -220,8 +210,8 @@ onBeforeUnmount(() => {
             <h2 class="text-sm font-semibold text-gray-800">{{ selectedPhone?.name || '' }}</h2>
           </div>
           <div class="flex items-center space-x-4">
-            <Button @click="showAddLeadModal = true" class="bg-gray-700 text-black" :showAddLeadModal="showAddLeadModal" :disabled="!isMappingSet" >+ Add Lead</Button>
-            <Button @click="showWhatsappTemplates = true" :disabled="!isMappingSet">Send Template</Button>
+            <Button @click="showAddLeadModal = true" class="bg-gray-700 text-black" :showAddLeadModal="showAddLeadModal">+ Add Lead</Button>
+            <Button @click="showWhatsappTemplates = true">Send Template</Button>
           </div>
         </div>
 

@@ -39,18 +39,18 @@ const props = defineProps({
 });
 
 const show = ref(props.showAddLeadModal);
-// const csrfToken = ref(window.frappe.csrf_token || "");
+const csrfToken = window? window.csrf_token : '';
 
 const fieldMappingsResource = createResource({
   url: "/api/method/frappe_whatsapp.api.whatsapp.get_leadmapping_fields",
   auto: true,
-  // headers: { "X-Frappe-CSRF-Token": csrfToken.value },
+  headers: { "X-Frappe-CSRF-Token": csrfToken },
 });
 
 const formDataResource = createResource({
   url: "/api/method/frappe_whatsapp.api.whatsapp.get_form_data",
   auto: true,
-  // headers: { "X-Frappe-CSRF-Token": csrfToken.value },
+  headers: { "X-Frappe-CSRF-Token": csrfToken},
 });
 
 const dynamicFields = ref([]);

@@ -69,7 +69,6 @@ const mountApp = () => {
         for (let key in values) {
           window.frappe[key] = values[key];
         }        
-        console.log('Context loaded:', window.frappe)
         socket = initSocket()
         app.config.globalProperties.$socket = socket
         app.mount('#app')

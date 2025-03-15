@@ -32,6 +32,7 @@ const showAddLeadModal = ref(false);
 const isLoading = ref(false);
 const user_update = ref(false);
 const whatsappMessages = ref([]);
+const isMappingSet = ref(false);
 
 const fetchContacts = async () => {
   try {
@@ -47,6 +48,8 @@ const fetchContacts = async () => {
     console.error("Error fetching contacts:", error);
   }
 };
+
+  
 
 async function sendMessageOnContactClick(phone) {
   if (!phone) return;
@@ -144,7 +147,21 @@ function scrollToBottom() {
   });
 }
 
-onMounted(() => {
+onMounted(async () => {
+
+  try {
+    const response = await fetch("/api/method/frappe_whatsapp.api.whatsapp.is_mapping_set", {
+      headers: {
+        'X-Frappe-CSRF-Token': csrfToken
+      }
+    });
+    const data = await response.json();
+    isMappingSet.value = data.message.status || [];
+    console.log("Contacts fetched:", contacts.value);
+  } catch (error) {
+    console.error("Error fetching contacts:", error);
+  }
+
   fetchContacts();
 
   $socket.on('oneinbox_whatsapp_message', (data) => {
@@ -187,57 +204,64 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="flex h-4/5 flex-col scroll " :class="{ 'splash-screen': isLoading }">
-    <div class="top-bar flex p-3 bg-white">
-      <div class="flex column gap-5 w-full">
-         <a href="/app" class="text-2xl">←</a>
-        <div class="flex gap-2 items-center">
-          <WhatsAppIcon class="h-8 w-8 text-gray-500" />
-          <h1>Whatsapp</h1>
-        </div>
-      </div>
-    </div>
-
-    <div class="flex h-screen overflow-hidden">
-      <div class="w-1/5">
-        <WhatsappSidebar :contacts="contacts" :user_update="user_update" :socket="$socket" />
-      </div>
-
-      <div class="whatsapp-chat-container h-screen w-full flex-col">
-        <div class="top-bar flex items-center justify-between p-2 bg-white" v-if="selectedPhone">
-          <div class="flex flex-col">
-            <h2 class="text-xl font-semibold text-gray-800">{{ selectedPhone?.number || "" }}</h2>
-            <h2 class="text-sm font-semibold text-gray-800">{{ selectedPhone?.name || '' }}</h2>
-          </div>
-          <div class="flex items-center space-x-4">
-            <Button @click="showAddLeadModal = true" class="bg-gray-700 text-black" :showAddLeadModal="showAddLeadModal">+ Add Lead</Button>
-            <Button @click="showWhatsappTemplates = true">Send Template</Button>
-          </div>
-        </div>
-
-        <div v-if="!selectedPhone" class="flex flex-1 flex-col items-center justify-center gap-3 text-xl font-medium text-gray-500">
-          <span>Click Any Contact To View Conversation</span>
-        </div>
-
-        <div v-else-if="selectedPhone && whatsappMessages.length === 0" class="flex flex-1 flex-col items-center justify-center gap-3 text-xl font-medium text-gray-500">
-          <WhatsAppIcon class="h-10 w-10 text-gray-500" />
-          <span>No messages yet</span>
-        </div>
-
-        <div v-else class="messages-container flex-1 p-4 overflow-y-auto">
-          <WhatsAppArea class="px-3 sm:px-10" :messages="whatsappMessages" />
-        </div>
-
-        <div class="chat-box-container border-t-gray-100 mb-16">
-          <WhatsAppBox v-if="selectedPhone" :doctype="props.doctype" :docname="props.docname" :phone="selectedPhone?.number" @message-sent="fetchMessages" />
-        </div>
-
-        <WhatsappTemplateSelectorModal v-model="showWhatsappTemplates" :doctype="doctype" @send="(t) => sendTemplate(t)"/>
-        <WhatappAddToLeadModal v-model="showAddLeadModal" :first_name="selectedPhone?.name || ''" :contact_number="selectedPhone?.number || ''" :isLoading="isLoading"/>
-      </div>
-    </div>
-  </div>
-</template>
+   <div class="flex h-4/5 flex-col scroll " :class="{ 'splash-screen': isLoading }">
+     <div class="top-bar flex p-3 bg-white">
+       <div class="flex column  w-full">
+         <div class="flex column gap-5 w-full">
+          <a href="/app" class="text-2xl">←</a>
+         <div class="flex gap-2 items-center">
+           <WhatsAppIcon class="h-8 w-8 text-gray-500" />
+           <h1>Whatsapp</h1>
+         </div>
+       </div>
+       <h1 class="w-full text-red-500" v-if="!isMappingSet">
+   Lead Mapping is Not Configured Yet
+ </h1>
+ 
+ 
+       </div>
+     </div>
+ 
+     <div class="flex h-screen overflow-hidden">
+       <div class="w-1/5">
+         <WhatsappSidebar :contacts="contacts" :user_update="user_update" :socket="$socket" />
+       </div>
+ 
+       <div class="whatsapp-chat-container h-screen w-full flex-col">
+         <div class="top-bar flex items-center justify-between p-2 bg-white" v-if="selectedPhone">
+           <div class="flex flex-col">
+             <h2 class="text-xl font-semibold text-gray-800">{{ selectedPhone?.number || "" }}</h2>
+             <h2 class="text-sm font-semibold text-gray-800">{{ selectedPhone?.name || '' }}</h2>
+           </div>
+           <div class="flex items-center space-x-4">
+             <Button @click="showAddLeadModal = true" class="bg-gray-700 text-black" :showAddLeadModal="showAddLeadModal" :disabled="!isMappingSet" >+ Add Lead</Button>
+             <Button @click="showWhatsappTemplates = true" :disabled="!isMappingSet">Send Template</Button>
+           </div>
+         </div>
+ 
+         <div v-if="!selectedPhone" class="flex flex-1 flex-col items-center justify-center gap-3 text-xl font-medium text-gray-500">
+           <span>Click Any Contact To View Conversation</span>
+         </div>
+ 
+         <div v-else-if="selectedPhone && whatsappMessages.length === 0" class="flex flex-1 flex-col items-center justify-center gap-3 text-xl font-medium text-gray-500">
+           <WhatsAppIcon class="h-10 w-10 text-gray-500" />
+           <span>No messages yet</span>
+         </div>
+ 
+         <div v-else class="messages-container flex-1 p-4 overflow-y-auto">
+           <WhatsAppArea class="px-3 sm:px-10" :messages="whatsappMessages" />
+         </div>
+ 
+         <div class="chat-box-container border-t-gray-100 mb-16">
+           <WhatsAppBox v-if="selectedPhone" :doctype="props.doctype" :docname="props.docname" :phone="selectedPhone?.number" @message-sent="fetchMessages" />
+         </div>
+ 
+         <WhatsappTemplateSelectorModal v-model="showWhatsappTemplates" :doctype="doctype" @send="(t) => sendTemplate(t)"/>
+         <WhatappAddToLeadModal v-model="showAddLeadModal" :first_name="selectedPhone?.name || ''" :contact_number="selectedPhone?.number || ''" :isLoading="isLoading"/>
+       </div>
+     </div>
+   </div>
+ </template>
 
 <style>
 .whatsapp-chat-container {

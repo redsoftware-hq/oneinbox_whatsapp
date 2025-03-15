@@ -448,4 +448,3 @@ def emit_user_update_event(doc, method=None):
 def is_mapping_set():
     fields = frappe.get_single("WhatsApp Settings")
     return {"set_status":fields.lead_reference_doctype!=""}
-

@@ -39,18 +39,18 @@ const props = defineProps({
 });
 
 const show = ref(props.showAddLeadModal);
-const csrfToken = ref(window.frappe.csrf_token || "");
+// const csrfToken = ref(window.frappe.csrf_token || "");
 
 const fieldMappingsResource = createResource({
   url: "/api/method/frappe_whatsapp.api.whatsapp.get_leadmapping_fields",
   auto: true,
-  headers: { "X-Frappe-CSRF-Token": csrfToken.value },
+  // headers: { "X-Frappe-CSRF-Token": csrfToken.value },
 });
 
 const formDataResource = createResource({
   url: "/api/method/frappe_whatsapp.api.whatsapp.get_form_data",
   auto: true,
-  headers: { "X-Frappe-CSRF-Token": csrfToken.value },
+  // headers: { "X-Frappe-CSRF-Token": csrfToken.value },
 });
 
 const dynamicFields = ref([]);
@@ -121,7 +121,7 @@ const submitLead = async () => {
       headers: {
         'Accept': 'application/json',
         'Content-Type': 'application/json',
-        'X-Frappe-CSRF-Token': csrfToken.value
+        // 'X-Frappe-CSRF-Token': csrfToken.value
       },
       method: "POST",
       body: JSON.stringify({ doctype: form_name.value, data: leadData }),

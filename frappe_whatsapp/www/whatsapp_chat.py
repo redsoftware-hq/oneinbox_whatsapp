@@ -1,11 +1,8 @@
 # Copyright (c) 2022, Frappe Technologies Pvt. Ltd. and Contributors
 # GNU GPLv3 License. See license.txt
 
-
+from __future__ import unicode_literals
 import frappe
-from frappe.integrations.frappe_providers.frappecloud_billing import is_fc_site
-from frappe.utils import cint, get_system_timezone
-from frappe.utils.telemetry import capture
 
 no_cache = 1
 
@@ -16,8 +13,6 @@ def get_context(context):
 	frappe.db.commit()
 	context = frappe._dict()
 	context.boot = get_boot()
-	if frappe.session.user != "Guest":
-		capture("active_site", "whatsapp_chat")
 	return context
 
 
@@ -36,15 +31,6 @@ def get_boot():
 			"site_name": frappe.local.site,
 			"read_only_mode": frappe.flags.read_only,
 			"csrf_token": frappe.sessions.get_csrf_token(),
-			"setup_complete": cint(frappe.get_system_settings("setup_complete")),
-			"sysdefaults": frappe.defaults.get_defaults(),
-			"is_demo_site": frappe.conf.get("is_demo_site"),
-			"is_fc_site": is_fc_site(),
-			"timezone": {
-				"system": get_system_timezone(),
-				"user": frappe.db.get_value("User", frappe.session.user, "time_zone")
-				or get_system_timezone(),
-			},
 		}
 	)
 

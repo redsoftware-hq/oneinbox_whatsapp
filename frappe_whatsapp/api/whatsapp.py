@@ -186,12 +186,10 @@ def create_whatsapp_message(
     return doc.name
 
 @frappe.whitelist()
-def send_whatsapp_template(template, to, reference_doctype=None, reference_name=None):
+def send_whatsapp_template(template, to):
     doc = frappe.new_doc("WhatsApp Message")
     doc.update(
         {
-            # "reference_doctype": reference_doctype,
-            # "reference_name": reference_name,
             "message_type": "Template",
             "message": "Template message",
             "content_type": "text",
@@ -242,11 +240,10 @@ def get_from_name(message):
 
 
 @frappe.whitelist()
-def get_whatsapp_contact(search=None, start=0, page_length=20):
+def get_whatsapp_contact(start=0, page_length=20):
     start = int(start)
     page_length = int(page_length)
 
-    # check search and filter contacts.
 
     whatsapp_contacts = frappe.get_all(
         "WhatsApp Contact",
@@ -255,7 +252,9 @@ def get_whatsapp_contact(search=None, start=0, page_length=20):
             "whatsapp_name",
             "unread_message_count",
             "last_message_time",
+            "discard",
             "is_lead",
+            "marketing_opt_in"
         ],
         filters={"is_lead": 0},
         start=start,
@@ -266,27 +265,56 @@ def get_whatsapp_contact(search=None, start=0, page_length=20):
     return whatsapp_contacts
 
 
-
-
 @frappe.whitelist()
 def save_as_lead(data, doctype):
     try:
+
+        if isinstance(data, str):
+            data = json.loads(data)
+        variation=None
+        lead_doc_meta = frappe.get_meta(doctype)
+        if not lead_doc_meta:
+            return {"status": "error", "message": f"{doctype} Doctype not found"}
+
         if isinstance(data, str):
             data = json.loads(data)
 
-        contact_number = data.get("contact_number", "").strip()
-        if not contact_number:
-            return {"status": "error", "message": "Contact number is required"}
+        contact_number_fields = ["mobile_no", "mobile_number", "phone", "contact_number", "contact_no", "phone_number", "phone_no"]
 
-        if not contact_number.startswith("+"):
-            contact_number = "+91-" + contact_number
+        contact_number_field = None
 
-        data["contact_number"] = contact_number
+        for field in lead_doc_meta.fields:
+            if field.fieldname in contact_number_fields:
+                contact_number_field = field
+                break
+                         
+        if contact_number_field:
+            contact_number = data.get(contact_number_field.fieldname, "").strip()
+            variation=contact_number
+        
+            if contact_number:
+                length_of_number = len(contact_number)
+                country_code = contact_number_field.default[:3:] if contact_number_field.default else ""
+
+                if length_of_number == 12 and contact_number.startswith(country_code[0:]):  
+                    contact_number = f"{country_code}-{contact_number[2:]}"  
+                elif length_of_number == 12 and country_code :
+                    contact_number = f"{country_code}-{contact_number[2:]}"
+                
+                elif length_of_number == 14 and country_code :
+                    contact_number = f"{country_code[:3]}-{contact_number[4:]}"
+                
+                elif length_of_number == 13 and country_code :
+                    contact_number = f"{country_code}-{contact_number[3:]}"
+                
+                elif length_of_number == 10 and country_code :
+                    contact_number = f"{country_code[:3:]}-{contact_number}"
+
+                data[contact_number_field.fieldname] = contact_number           
 
         doc = frappe.get_doc({"doctype": doctype, **data})
         doc.insert(ignore_permissions=True)
 
-        phone_variants = [contact_number, contact_number.replace("+91-", "")]
 
         query = """
             UPDATE `tabWhatsApp Contact`
@@ -295,7 +323,7 @@ def save_as_lead(data, doctype):
             LIMIT 1
         """
 
-        frappe.db.sql(query, (doctype, doc.name, f"%{phone_variants[0]}%", f"%{phone_variants[1]}%"))
+        frappe.db.sql(query, (doctype, doc.name, variation, variation))
         frappe.db.commit()
 
         return {"status": "success", "message": "Lead saved and contact updated"}
@@ -412,8 +440,11 @@ def emit_user_update_event(doc, method=None):
             "whatsapp_contact_update",
             user_update_event,
         )    
-           
     except Exception as e:
         frappe.logger().error(f"Error Emitting User Update Event: {frappe.get_traceback()}")
         frappe.log_error("Error Emitting User Update Event", frappe.get_traceback())
 
+@frappe.whitelist(allow_guest=True)     
+def is_mapping_set():
+    fields = frappe.get_single("WhatsApp Settings")
+    return {"set_status":fields.lead_reference_doctype!=""}

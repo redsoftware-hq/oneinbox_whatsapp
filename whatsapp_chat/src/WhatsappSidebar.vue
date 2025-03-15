@@ -44,10 +44,10 @@
 </template>
 
 <script>
-import { Badge, frappeRequest } from "frappe-ui";
+import { Badge } from "frappe-ui";
 import { format, isToday, isYesterday } from "date-fns";
 import { emitter } from "./utils/eventBus.js";
-import { ref, computed, watch } from "vue";
+import { ref, computed, watch, onMounted } from "vue"; // ✅ Added missing import
 
 export default {
   name: "WhatsappSidebar",
@@ -61,13 +61,17 @@ export default {
   setup(props) {
     const search = ref("");
     const selectedContact = ref(null);
+    const contacts = ref(props.contacts || []);
 
     const resetMessageCount = async (phone) => {
       if (!phone) return;
       try {
         await fetch("/api/method/frappe_whatsapp.api.whatsapp.reset_unread_count", {
           method: "POST",
-          headers: { "Content-Type": "application/json"},
+          headers: {
+            "Content-Type": "application/json",
+            "X-Frappe-CSRF-Token": window.frappe.csrf_token,
+          },
           body: JSON.stringify({ phone }),
         });
       } catch (error) {
@@ -76,8 +80,8 @@ export default {
     };
 
     const filteredContacts = computed(() => {
-      if (!search.value) return props.contacts;
-      return props.contacts.filter(
+      if (!search.value) return contacts.value;
+      return contacts.value.filter(
         (contact) =>
           contact.phone.includes(search.value) ||
           (contact.whatsapp_name || "").toLowerCase().includes(search.value.toLowerCase())
@@ -92,13 +96,22 @@ export default {
         number: contact.phone,
         name: contact.whatsapp_name,
       });
+
       localStorage.setItem("selectedContact", JSON.stringify(contact));
       emitter.emit("contact-selected-refresh");
     };
 
+    // Watch for prop updates
     watch(() => props.contacts, (newContacts) => {
-      console.log("Contacts updated:", newContacts);
+      contacts.value = newContacts;
     });
+
+    // Real-time updates from socket
+    if (props.socket) {
+      props.socket.on("contacts_updated", (newContacts) => {
+        contacts.value = newContacts;
+      });
+    }
 
     const formatDate = (dateString) => {
       if (!dateString) return "";
@@ -118,6 +131,17 @@ export default {
       }
       return formattedTime;
     };
+
+    // onMounted(async () => {
+    //   if (props.socket) { // ✅ Fixed the incorrect `$socket` reference
+    //     props.socket.on("whatsapp_contact_update", async (data) => {
+
+    //       if (selectedContact.value && selectedContact.value === data.phone) {
+    //         resetMessageCount(selectedContact.value);
+    //       }
+    //     });
+    //   }
+    // });
 
     return {
       search,

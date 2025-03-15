@@ -8,7 +8,7 @@
         ref="searchInput"
         v-model="search"
         type="text"
-        :placeholder="'Welcome Message'"
+        placeholder="Welcome Message"
       >
         <template #prefix>
           <FeatherIcon name="search" class="h-4 w-4 text-gray-500" />
@@ -39,10 +39,10 @@
       <div v-else class="mt-2">
         <div class="flex h-56 flex-col items-center justify-center">
           <div class="text-lg text-gray-500">
-            {{ 'No templates found' }}
+            No templates found
           </div>
           <Button
-            :label="'Create New'"
+            label="Create New"
             class="mt-4"
             @click="newWhatsappTemplate"
           />
@@ -56,15 +56,15 @@
 import { TextEditor, createListResource } from 'frappe-ui'
 import { ref, computed, nextTick, watch, onMounted, defineModel } from 'vue'
 
+const csrfToken = ref(window.frappe?.csrf_token || '') // ✅ Fixed CSRF token access
+
 const props = defineProps({
   doctype: String,
 })
 
 const show = defineModel()
 const searchInput = ref('')
-
 const emit = defineEmits(['send'])
-
 const search = ref('')
 
 const templates = createListResource({
@@ -74,22 +74,22 @@ const templates = createListResource({
   fields: ['name', 'template', 'footer'],
   filters: { status: 'APPROVED', for_doctype: ['in', [props.doctype, '']] },
   orderBy: 'modified desc',
-  pageLength: 99999,
-  headers: {
-    }
+  pageLength: 99999
 })
 
 onMounted(() => {
-  if (templates.data == null) {
-    templates.fetch()
+  if (!templates.data) {
+    templates.fetch({
+      headers: { 'X-Frappe-CSRF-Token': csrfToken.value } // ✅ Fixed header usage
+    })
   }
 })
 
 const filteredTemplates = computed(() => {
   return (
-    templates.data?.filter((template) => {
-      return template.name.toLowerCase().includes(search.value.toLowerCase())
-    }) ?? []
+    templates.data?.filter((template) =>
+      template.name.toLowerCase().includes(search.value.toLowerCase())
+    ) ?? []
   )
 })
 

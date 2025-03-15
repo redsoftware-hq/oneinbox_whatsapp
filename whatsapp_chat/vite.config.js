@@ -22,8 +22,10 @@ export default defineConfig({
             /<\/body>/,
             `
              <script>
+                if (!window.frappe)
+                  window.frappe={}
                 {% for key in boot %}
-                window["{{ key }}"] = {{ boot[key] | tojson }};
+                window.frappe["{{ key }}"] = {{ boot[key] | tojson }};
                 {% endfor %}
             </script>
             </body>

@@ -34,7 +34,6 @@ let globalComponents = {
 // Create Vue app instance
 let app = createApp(App)
 
-// Configure FrappeUI
 setConfig('resourceFetcher', frappeRequest)
 app.use(FrappeUI)
 
@@ -45,20 +44,15 @@ for (let key in globalComponents) {
   app.component(key, globalComponents[key])
 }
 
-// Initialize WebSocket
 let socket
 
-// Helper function to log and mount app
 const mountApp = () => {
   socket = initSocket()
   app.config.globalProperties.$socket = socket
-  console.log('Socket initialized:', socket)
   app.mount('#app')
   console.log('App mounted successfully.')
 }
 
-console.log('Running in development mode...')
-   console.log(import.meta,"-----------------")
   if (import.meta.env.DEV) {
     frappeRequest({ 
       url: '/api/method/frappe_whatsapp.www.whatsapp_chat.get_context_for_dev',

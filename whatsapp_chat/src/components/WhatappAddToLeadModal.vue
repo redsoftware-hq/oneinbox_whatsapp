@@ -110,13 +110,12 @@ const getOptions = (field) => {
 const submitLead = async () => {
   emitter.emit("lead_submission_started", lead.value);
   const leadData = JSON.parse(JSON.stringify(toRaw(lead.value)));
-  // Convert objects to string values for "Select" and "Link" fields
   Object.keys(leadData).forEach((key) => {
     if (typeof leadData[key] === "object" && leadData[key] !== null) {
       leadData[key] = leadData[key].value || leadData[key].label || "";
     }
   });
-
+  console.log("Lead data:", leadData); 
   try {
     const response = await fetch("/api/method/frappe_whatsapp.api.whatsapp.save_as_lead", {
       headers: {
@@ -130,8 +129,9 @@ const submitLead = async () => {
 
     const result = await response.json();
     if (result.message.status === "success") {
-      emitter.emit("lead_submission_completed", lead.value);
+      emitter.emit("lead_submission_process_completed", lead.value);
     } else {
+      emitter.emit("lead_submission_process_error", lead.value);
       console.error("Error submitting lead:", result.message);
     }
   } catch (error) {

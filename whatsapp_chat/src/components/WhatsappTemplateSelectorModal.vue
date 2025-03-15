@@ -56,7 +56,7 @@
 import { TextEditor, createListResource } from 'frappe-ui'
 import { ref, computed, nextTick, watch, onMounted, defineModel } from 'vue'
 
-const csrfToken = ref(window.frappe?.csrf_token || '') // ✅ Fixed CSRF token access
+const csrfToken = window.frappe?.csrf_token || window.frappe?.csrf_token // ✅ Fixed CSRF token access
 
 const props = defineProps({
   doctype: String,
@@ -80,7 +80,7 @@ const templates = createListResource({
 onMounted(() => {
   if (!templates.data) {
     templates.fetch({
-      headers: { 'X-Frappe-CSRF-Token': csrfToken.value } // ✅ Fixed header usage
+      headers: { 'X-Frappe-CSRF-Token': csrfToken } // ✅ Fixed header usage
     })
   }
 })

@@ -39,7 +39,7 @@ const props = defineProps({
 });
 
 const show = ref(props.showAddLeadModal);
-const csrfToken = window? window.csrf_token : '';
+const csrfToken = window.csrf_token || window.frappe?.csrf_token
 
 const fieldMappingsResource = createResource({
   url: "/api/method/frappe_whatsapp.api.whatsapp.get_leadmapping_fields",

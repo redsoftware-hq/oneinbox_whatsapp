@@ -18,7 +18,7 @@
 
     <Button variant="ghost" icon="x" @click="reply = {}" />
   </div>
-  <div class="flex items-end gap-2 px-3 py-2.5 sm:px-10" v-bind="$attrs">
+  <div class="flex items-end gap-2 px-3 py-2.5 sm:px-10 bg-gray-200" v-bind="$attrs">
     <div class="flex h-8 items-center gap-2">
       <FileUploader @success="(file) => uploadFile(file)">
         <template v-slot="{ openFileSelector }">
@@ -69,6 +69,8 @@ import SmileIcon from './components/Icons/SmileIcon.vue'
 import { createResource, Textarea, FileUploader, Dropdown } from 'frappe-ui'
 import { ref, nextTick, watch, defineModel } from 'vue'
 // import { defineModel } from 'vue';
+import { emitter } from './utils/eventBus';
+
 
 // Define the translation function
 // const __ = (text) => text;
@@ -108,8 +110,7 @@ function sendTextMessage(event) {
 }
 
 async function sendWhatsAppMessage() {
-  console.log("PROP PHONE value check", content.value, "--------------------");
-
+ 
   let args = {
     message: content.value,
     to: props.phone || doc.value.contact_number.replace(/\D/g, ""),
@@ -118,7 +119,6 @@ async function sendWhatsAppMessage() {
     content_type: whatsapp?.value?.content_type,
   };
 
-  // Fix: Ensure variables exist before assignment
   if (content) content.value = '';
   if (fileType) fileType.value = '';
   if (whatsapp.value) {
@@ -135,6 +135,9 @@ async function sendWhatsAppMessage() {
       'X-Frappe-CSRF-Token': window.frappe.csrf_token || frappe.csrf_token || window.csrf_token,
     }
   });
+  
+  emitter.emit("message_sent",args)
+
 }
 
 

@@ -1,7 +1,6 @@
 <template>
   <div>
     <div v-for="(group, date) in groupedMessages" :key="date">
-      <!-- Date Header -->
       <div class="text-center text-gray-500 text-sm py-2">
         {{ date }}
       </div>
@@ -40,10 +39,9 @@ const props = defineProps({
   messages: Array,
 });
 
-// Group messages by date
 const groupedMessages = computed(() => {
   return props.messages.reduce((acc, message) => {
-    const date = formatDate(message.creation, 'ddd, MMM D, YYYY'); // Format as "Mon, Jul 1, 2024"
+    const date = formatDate(message.creation, 'ddd, MMM D, YYYY');
     if (!acc[date]) {
       acc[date] = [];
     }

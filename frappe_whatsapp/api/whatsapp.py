@@ -424,25 +424,37 @@ def send_message_event(doc, method=None):
 
 
 
+import frappe
+
 def emit_user_update_event(doc, method=None):
     try:
+        before_save = doc.get_doc_before_save()  # Get the previous state of the document
+        changed_fields = []
+
+        if before_save:
+            for field in ["phone", "last_message_time", "whatsapp_name", "unread_message_count", "is_lead", "discard", "marketing_opt_in"]:
+                if getattr(doc, field) != getattr(before_save, field):
+                    changed_fields.append(field) 
+                    
         user_update_event = {
-			"phone": doc.phone,
-			"last_message_time": doc.last_message_time,
-			"whatsapp_name": doc.whatsapp_name,
-			"unread_message_count": doc.unread_message_count,
-			"is_lead": doc.is_lead,
-			"discard": doc.discard,
-			"marketing_opt_in": doc.marketing_opt_in,
-			}
+            "phone": doc.phone,
+            "last_message_time": doc.last_message_time,
+            "whatsapp_name": doc.whatsapp_name,
+            "unread_message_count": doc.unread_message_count,
+            "is_lead": doc.is_lead,
+            "discard": doc.discard,
+            "marketing_opt_in": doc.marketing_opt_in,
+            "changed_fields": changed_fields  # Append changed fields list
+        }
 
         frappe.publish_realtime(
             "whatsapp_contact_update",
             user_update_event,
-        )    
+        ) 
+
     except Exception as e:
-        frappe.logger().error(f"Error Emitting User Update Event: {frappe.get_traceback()}")
-        frappe.log_error("Error Emitting User Update Event", frappe.get_traceback())
+        frappe.log_error(f"Error in emit_user_update_event: {str(e)}")
+
 
 @frappe.whitelist(allow_guest=True)     
 def is_mapping_set():

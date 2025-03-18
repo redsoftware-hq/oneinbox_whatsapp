@@ -150,10 +150,18 @@ export default {
       if (props.socket) {
         props.socket.on("whatsapp_contact_update", (data) => {
           const existingIndex = contacts.value.findIndex((c) => c.phone === data.phone);
+          if (!data.changed_fields || data.changed_fields.length === 0) {
+          return;
+          }
           if (existingIndex !== -1) {
           const [existingContact] = contacts.value.splice(existingIndex, 1);
         contacts.value.unshift({ ...existingContact, ...data });
-          } else {
+          }
+          else if (data.changed_fields.includes("unread_message_count") ) {
+        contacts.value[existingIndex] = { ...existingContact, ...data };
+      }
+          
+          else {
             contacts.value.unshift(data);
           }
           contacts.value = [...contacts.value];

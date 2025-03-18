@@ -123,47 +123,49 @@ onMounted(async () => {
   }
   fetchContacts();
   if ($socket) {
-    $socket.on('oneinbox_whatsapp_message', (data) => {
-      if (selectedPhone.value && selectedPhone.value.number === data.from)
-      data.from === selectedPhone.value.number || data.to === selectedPhone.value.phone
-      {
-        whatsappMessages.value.push(data);
-        whatsappMessages.value.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-        nextTick(scrollToBottom);
-      }
-    });
+  $socket.on('oneinbox_whatsapp_message', (data) => {
+    if (
+      selectedPhone.value &&
+      (data.from === selectedPhone.value.number || data.to === selectedPhone.value.phone)
+    ) {
+      whatsappMessages.value.push(data);
+      whatsappMessages.value.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+      nextTick(scrollToBottom);
+    }
+  });
 
-    $socket.on('whatsapp_contact_update', async (data) => {
+  $socket.on('whatsapp_contact_update', async (data) => {
     await fetchContacts();
 
     if (selectedPhone.value && selectedPhone.value.number === data.phone) {
-      
-        return;
+      return; // Avoid unnecessary updates
     }
-    
 
     const existingIndex = contacts.value.findIndex((c) => c.phone === data.phone);
-        if (existingIndex !== -1) {
-          const [existingContact] = contacts.value.splice(existingIndex, 1);
+    
+    if (existingIndex !== -1) {
+      const existingContact = contacts.value[existingIndex];
+      if (!data.changed_fields || data.changed_fields.length === 0) {
+          return;
+          }
+      if (data.changed_fields.includes("last_message_time")) {
+        contacts.value.splice(existingIndex, 1);
         contacts.value.unshift({ ...existingContact, ...data });
-        } else {
-          contacts.value.unshift(data);
-        }
+      } else if (data.changed_fields.includes("unread_message_count") ) {
+        contacts.value[existingIndex] = { ...existingContact, ...data };
+      }
+    } else {
+      contacts.value.unshift(data);
+    }
 
-        contacts.value = [...contacts.value];
+    contacts.value = [...contacts.value];
+     alert(selectedContact.value,data.phone)
+    if (selectedContact.value === data.phone) {
+      resetMessageCount(selectedContact.value);
+    }
+  });
+}
 
-        if (selectedContact.value && selectedContact.value === data.phone) {
-          resetMessageCount(selectedContact.value);
-        }
-});
-
-
-$socket.onAny((event, data) => {
-});
-    $socket.on('lead_submission_completed', async () => {
-      await fetchContacts();
-    });
-  }
   emitter.on('lead_submission_started', ()=>isLoading.value = true);
   emitter.on('lead_submission_process_error', ()=>isLoading.value = false);
   emitter.on("message_sent")

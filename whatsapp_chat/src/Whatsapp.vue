@@ -166,7 +166,7 @@ $socket.onAny((event, data) => {
   }
   emitter.on('lead_submission_started', ()=>isLoading.value = true);
   emitter.on('lead_submission_process_error', ()=>isLoading.value = false);
-  emitter.on("message_sent",(data)=>alert(JSON.stringify(data)))
+  emitter.on("message_sent")
 
   emitter.on('lead_submission_process_completed', ()=>{isLoading.value = false,window.location.reload()});
   // emitter.on("message_sent",(data)=>{whatsappMessages.value.push(data);fetchMessages()})

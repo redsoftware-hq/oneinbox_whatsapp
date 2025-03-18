@@ -20,9 +20,9 @@
       class="flex-1 overflow-y-auto min-h-0"
       @scroll="handleScroll"
     >
-      <ul v-if="filteredContacts?.length">
+      <ul v-if="contacts.length">
         <li
-          v-for="contact in filteredContacts"
+          v-for="contact in contacts"
           :key="contact.phone"
           class="flex items-center justify-between p-4 cursor-pointer transition duration-200 hover:bg-gray-100 border-b border-gray-300 bg-white w-full"
           :class="{ 'bg-blue-100': selectedContact === contact.phone }"
@@ -68,12 +68,11 @@
   </div>
 </template>
 
-
 <script>
 import { Badge } from "frappe-ui";
 import { format, isToday, isYesterday } from "date-fns";
 import { emitter } from "./utils/eventBus.js";
-import { ref, computed, watch, onMounted } from "vue";
+import { ref, watch, onMounted } from "vue";
 
 export default {
   name: "WhatsappSidebar",
@@ -94,18 +93,22 @@ export default {
     const pageSize = 20;
     let debounceTimer = null;
 
-    const fetchContacts = async () => {
+    const fetchContacts = async (searchTerm = "") => {
       if (loadingMore.value) return;
       loadingMore.value = true;
       try {
         const response = await fetch(
-          `/api/method/frappe_whatsapp.api.whatsapp.get_whatsapp_contact?start=${page * pageSize}&page_length=${pageSize}`,
+          `/api/method/frappe_whatsapp.api.whatsapp.get_whatsapp_contact?start=${page * pageSize}&page_length=${pageSize}&search_term=${encodeURIComponent(searchTerm)}`,
           {
             headers: { "X-Frappe-CSRF-Token": props.csrfToken },
           }
         );
         const data = await response.json();
-        contacts.value = [...contacts.value, ...(data.message || [])];
+        if (page === 0) {
+          contacts.value = data.message || []; // Replace contacts on new search
+        } else {
+          contacts.value = [...contacts.value, ...(data.message || [])]; // Append contacts on scroll
+        }
         page++;
       } catch (error) {
         console.error("Error fetching contacts:", error);
@@ -121,18 +124,15 @@ export default {
         if (!scrollContainer.value || loadingMore.value) return;
         const { scrollTop, scrollHeight, clientHeight } = scrollContainer.value;
         if (scrollTop + clientHeight >= scrollHeight - 10) {
-          fetchContacts();
+          fetchContacts(search.value);
         }
       }, 300);
     };
 
-    const filteredContacts = computed(() => {
-      if (!search.value) return contacts.value;
-      return contacts.value.filter(
-        (contact) =>
-          contact.phone.includes(search.value) ||
-          (contact.whatsapp_name || "").toLowerCase().includes(search.value.toLowerCase())
-      );
+    watch(search, (newSearch) => {
+      page = 0; // Reset pagination when search changes
+      contacts.value = []; // Clear current contacts
+      fetchContacts(newSearch); // Fetch new results based on search term
     });
 
     const selectContact = (contact) => {
@@ -150,20 +150,19 @@ export default {
       if (props.socket) {
         props.socket.on("whatsapp_contact_update", (data) => {
           const existingIndex = contacts.value.findIndex((c) => c.phone === data.phone);
+
           if (!data.changed_fields || data.changed_fields.length === 0) {
-          return;
+            return;
           }
+
           if (existingIndex !== -1) {
-          const [existingContact] = contacts.value.splice(existingIndex, 1);
-        contacts.value.unshift({ ...existingContact, ...data });
-          }
-          else if (data.changed_fields.includes("unread_message_count") ) {
-        contacts.value[existingIndex] = { ...existingContact, ...data };
-      }
-          
-          else {
+            const existingContact = contacts.value[existingIndex];
+            contacts.value.splice(existingIndex, 1);
+            contacts.value.unshift({ ...existingContact, ...data });
+          } else {
             contacts.value.unshift(data);
           }
+
           contacts.value = [...contacts.value];
         });
       }
@@ -190,7 +189,7 @@ export default {
     return {
       search,
       selectedContact,
-      filteredContacts,
+      contacts,
       selectContact,
       formatDate,
       scrollContainer,

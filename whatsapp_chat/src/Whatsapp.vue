@@ -137,8 +137,12 @@ onMounted(async () => {
   $socket.on('whatsapp_contact_update', async (data) => {
     await fetchContacts();
 
-    if (selectedPhone.value && selectedPhone.value.number === data.phone) {
-      return; // Avoid unnecessary updates
+    // if (selectedPhone.value && selectedPhone.value.number === data.phone) {
+    //   return;
+    // }
+
+    if (data.changed_fields.includes("unread_message_count") && selectedPhone.value && selectedPhone.value.number === data.phone){
+       return ;
     }
 
     const existingIndex = contacts.value.findIndex((c) => c.phone === data.phone);
@@ -148,18 +152,18 @@ onMounted(async () => {
       if (!data.changed_fields || data.changed_fields.length === 0) {
           return;
           }
-      if (data.changed_fields.includes("last_message_time")) {
+      if (data.changed_fields.includes("last_message_time") && selectedPhone.value.number !== data.phone ) {
         contacts.value.splice(existingIndex, 1);
         contacts.value.unshift({ ...existingContact, ...data });
-      } else if (data.changed_fields.includes("unread_message_count") ) {
+      } else if (data.changed_fields.includes("unread_message_count") && selectedPhone.value && selectedPhone.value.number !== data.phone ) {
         contacts.value[existingIndex] = { ...existingContact, ...data };
       }
-    } else {
-      contacts.value.unshift(data);
-    }
+    } 
+    // else {
+    //   contacts.value.unshift(data);
+    // }
 
-    contacts.value = [...contacts.value];
-     alert(selectedContact.value,data.phone)
+    // contacts.value = [...contacts.value];
     if (selectedContact.value === data.phone) {
       resetMessageCount(selectedContact.value);
     }
@@ -167,9 +171,10 @@ onMounted(async () => {
 }
 
   emitter.on('lead_submission_started', ()=>isLoading.value = true);
-  emitter.on('lead_submission_process_error',alert("some error occured"));
+  emitter.on("cancel_clicked",()=>console.log("herere"))
+  
 
-  emitter.on('lead_submission_process_completed', ()=>{isLoading.value = false,window.location.reload()});
+  emitter.on('lead_submission_process_completed', ()=>{showWhatsappTemplates = false,window.location.reload()});
   emitter.on('contact-selected', (data) => {
     if (!selectedPhone.value || selectedPhone.value.number !== data.number) {
       selectedPhone.value = data;
@@ -206,9 +211,7 @@ onBeforeUnmount(() => {
           <h1>Whatsapp</h1>
         </div>
       </div>
-      <h1 class="w-full text-red-500" v-if="!isMappingSet">
-  Lead Mapping is Not Configured Yet
-</h1>
+      
 
 
       </div>
@@ -226,7 +229,15 @@ onBeforeUnmount(() => {
             <h2 class="text-sm font-semibold text-gray-800">{{ selectedPhone?.name || '' }}</h2>
           </div>
           <div class="flex items-center space-x-4">
-            <Button @click="showAddLeadModal = true" class="bg-gray-700 text-black" :showAddLeadModal="showAddLeadModal" :disabled="!isMappingSet" >+ Add Lead</Button>
+            <Button 
+            @click="showAddLeadModal = true" 
+            class="bg-gray-700 text-black" 
+            :showAddLeadModal="showAddLeadModal" 
+            :disabled="!isMappingSet" 
+            :title="isMappingSet ? 'Click to add a new lead' : 'Lead Mapping is Not Configured  In Whatsapp Config Yet'"
+            >
+            + Add Lead
+            </Button>
             <Button @click="showWhatsappTemplates = true" :disabled="!isMappingSet">Send Template</Button>
           </div>
         </div>

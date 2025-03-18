@@ -240,29 +240,35 @@ def get_from_name(message):
 
 
 @frappe.whitelist()
-def get_whatsapp_contact(start=0, page_length=20):
+def get_whatsapp_contact(start=0, page_length=20, search_term=None):
     start = int(start)
     page_length = int(page_length)
 
+    query = """
+        SELECT Distinct phone, whatsapp_name, unread_message_count, last_message_time, 
+               discard, is_lead, marketing_opt_in 
+        FROM `tabWhatsApp Contact`
+        WHERE is_lead = 0
+    """
 
-    whatsapp_contacts = frappe.get_all(
-        "WhatsApp Contact",
-        fields=[
-            "phone",
-            "whatsapp_name",
-            "unread_message_count",
-            "last_message_time",
-            "discard",
-            "is_lead",
-            "marketing_opt_in"
-        ],
-        filters={"is_lead": 0},
-        start=start,
-        page_length=page_length,
-        order_by="last_message_time desc"
-    )
+    query_params = []
+
+    if search_term:
+        query += " AND (phone LIKE %s OR whatsapp_name LIKE %s)"
+        search_pattern = f"%{search_term}%"
+        query_params.extend([search_pattern, search_pattern])
+
+    # Add order by and pagination
+    query += " ORDER BY last_message_time DESC LIMIT %s OFFSET %s"
+    query_params.extend([page_length, start])
+
+    # Execute query
+    whatsapp_contacts = frappe.db.sql(query, query_params, as_dict=True)
 
     return whatsapp_contacts
+
+
+
 
 
 @frappe.whitelist()

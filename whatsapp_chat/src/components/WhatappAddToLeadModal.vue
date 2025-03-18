@@ -19,7 +19,7 @@
         />
       </div>
       <div class="mt-4 flex justify-end text-black">
-        <button class="mr-2 px-4 py-2 bg-gray-300 rounded" type="button" @click="closeDialog">Cancel</button>
+        <button class="mr-2 px-4 py-2 bg-gray-300 rounded" type="button" @click="cancelClicked">Cancel</button>
         <button class="px-4 py-2 bg-gray-700 text-white rounded" type="button" @click="submitLead">Save Lead</button>
       </div>
     </template>
@@ -138,5 +138,9 @@ const submitLead = async () => {
     console.error("Error submitting lead:", error);
   }
 };
+
+const cancelClicked=()=>{
+  emitter.emit("cancel_clicked")
+}
 
 </script>

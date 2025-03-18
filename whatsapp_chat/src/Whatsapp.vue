@@ -52,7 +52,7 @@ const resetMessageCount = async (phone) => {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "X-Frappe-CSRF-Token": window.frappe.csrf_token,
+            "X-Frappe-CSRF-Token": window.csrf_token || window.frappe.csrf_token,
           },
           body: JSON.stringify({ phone }),
         });

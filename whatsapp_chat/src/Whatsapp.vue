@@ -124,7 +124,6 @@ onMounted(async () => {
   fetchContacts();
   if ($socket) {
     $socket.on('oneinbox_whatsapp_message', (data) => {
-      alert(JSON.stringify(data))
       if (selectedPhone.value && selectedPhone.value.number === data.from)
       data.from === selectedPhone.value.number || data.to === selectedPhone.value.phone
       {

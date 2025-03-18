@@ -1,4 +1,12 @@
 frappe.ui.form.on('WhatsApp Settings', {
+    validate:function(frm){
+
+        check_field_option(frm)
+    },
+    after_save: function(frm) {
+        frm.set_value('mapping_saved', 1); 
+        frm.refresh_field('mapping_saved');
+    },
     refresh: function(frm) {
         frm.add_custom_button("Refresh Doctype", () => {
             lead_map_field(frm);
@@ -6,12 +14,17 @@ frappe.ui.form.on('WhatsApp Settings', {
         });
     },
     lead_reference_doctype: function(frm) {
+        frm.set_value('mapping_saved', 0); 
         lead_map_field(frm);
+    },
+    onload:function(frm){
+       if(frm.doc.mapping_saved && frm.doc.lead_reference_doctype){
+        lead_map_field(frm);
+       }
     }
-});
-
+}),
 frappe.ui.form.on('Whatsapp Lead Field Mapping', {
-    lead_field_value: function(frm, cdt, cdn) {
+    lead_field_name: function(frm, cdt, cdn) {
         let row = locals[cdt][cdn];
 
         if (frm.field_map && row.lead_field_name) {
@@ -38,8 +51,11 @@ function lead_map_field(frm) {
         });
 
         let required_fields = meta.fields.filter(f => f.reqd === 1).map(f => f.fieldname);
-        let optional_fields = meta.fields.filter(f => f.reqd !== 1).map(f => f.fieldname);
+        let excluded_fieldtypes = ["Column Break", "Section Break", "Tab Break"];
 
+        let optional_fields = meta.fields
+            .filter(f => f.reqd !== 1 && !excluded_fieldtypes.includes(f.fieldtype))
+            .map(f => f.fieldname);
         if (!required_fields.includes("executive")) {
             required_fields.push("executive");
             field_map["executive"] = "Link";
@@ -58,22 +74,42 @@ function lead_map_field(frm) {
                     child.lead_field_name = fieldname;
                     child.doctype_field_type = field_map[fieldname] || "Unknown";
                     child.whatsapp_field = whatsapp_field_options[fieldname] || "";
+                    frm.refresh_field("whatsapp_lead_field_mapping");
                 });
 
-                let df = frappe.meta.get_docfield("Whatsapp Lead Field Mapping", "lead_field_value", frm.doc.name);
+                let df = frappe.meta.get_docfield("Whatsapp Lead Field Mapping", "lead_field_name", frm.doc.name);
                 if (df) {
                     df.options = ["", ...required_fields, ...optional_fields].join("\n");
+                    frm.refresh_field("lead_field_name");
                 }
 
                 let whatsapp_df = frappe.meta.get_docfield("Whatsapp Lead Field Mapping", "whatsapp_field", frm.doc.name);
                 if (whatsapp_df) {
                     whatsapp_df.options = ["", ...Object.values(whatsapp_field_options)].join("\n");
+                    frm.refresh_field("whatsapp_lead_field_mapping");
                 }
-
-                frm.refresh_field("whatsapp_lead_field_mapping");
             }
         }
 
         frm.field_map = field_map;
     });
 }
+
+function check_field_option(frm) {
+    let field_mapping = frm.doc.whatsapp_lead_field_mapping || [];
+    let message = "";
+
+    let invalidMappings = field_mapping.filter(ele => {
+        return ["Link", "Dynamic Link", "Select", "Autocomplete"].includes(ele.doctype_field_type) && !ele.options;
+    });
+
+    if (invalidMappings.length > 0) {
+        message = "The following fields require an 'Options' value but are empty:\n";
+        invalidMappings.forEach(ele => {
+            message += `- ${ele.lead_field_name} (${ele.doctype_field_type})\n`;
+        });
+        frappe.throw(message);
+    }
+}
+
+

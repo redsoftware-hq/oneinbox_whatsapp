@@ -121,7 +121,7 @@ const submitLead = async () => {
       headers: {
         'Accept': 'application/json',
         'Content-Type': 'application/json',
-        // 'X-Frappe-CSRF-Token': csrfToken.value
+         "X-Frappe-CSRF-Token": csrfToken,
       },
       method: "POST",
       body: JSON.stringify({ doctype: form_name.value, data: leadData }),
@@ -130,7 +130,7 @@ const submitLead = async () => {
     const result = await response.json();
     if (result.message.status === "success") {
       emitter.emit("lead_submission_process_completed", lead.value);
-    } else {
+    } else if (result.message.status === "error") {
       emitter.emit("lead_submission_process_error", lead.value);
       console.error("Error submitting lead:", result.message);
     }

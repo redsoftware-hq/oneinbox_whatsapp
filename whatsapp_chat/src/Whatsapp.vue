@@ -167,11 +167,9 @@ onMounted(async () => {
 }
 
   emitter.on('lead_submission_started', ()=>isLoading.value = true);
-  emitter.on('lead_submission_process_error', ()=>isLoading.value = false);
-  emitter.on("message_sent")
+  emitter.on('lead_submission_process_error',alert("some error occured"));
 
   emitter.on('lead_submission_process_completed', ()=>{isLoading.value = false,window.location.reload()});
-  // emitter.on("message_sent",(data)=>{whatsappMessages.value.push(data);fetchMessages()})
   emitter.on('contact-selected', (data) => {
     if (!selectedPhone.value || selectedPhone.value.number !== data.number) {
       selectedPhone.value = data;
@@ -187,7 +185,6 @@ const scrollToBottom = () => {
   });
 };
 
-// ✅ Cleanup WebSocket listeners
 onBeforeUnmount(() => {
   if ($socket) {
     $socket.off('oneinbox_whatsapp_message');

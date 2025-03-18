@@ -27,9 +27,10 @@
   },
   {
    "fieldname": "doctype_field_type",
-   "fieldtype": "Data",
+   "fieldtype": "Autocomplete",
    "in_list_view": 1,
-   "label": "Doctype Field Type"
+   "label": "Doctype Field Type",
+   "options": "Data\nText\nText Editor\nSmall Text\nMarkdown Editor\nCode\nCheck\nSelect\nRead Only\nInt\nFloat\nCurrency\nPercent\nRating\nDuration\nDate\nTime\nDatetime\nDate Range\nLink\nDynamic Link\nTable\nTable MultiSelect\nLong Text\nPassword\nAttach\nAttach Image\nSignature\nBarcode\nGeolocation\nColor\nHTML\nButton"
   },
   {
    "fieldname": "options",
@@ -47,7 +48,7 @@
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2025-03-11 07:51:14.065083",
+ "modified": "2025-03-18 13:59:32.979972",
  "modified_by": "Administrator",
  "module": "Frappe Whatsapp",
  "name": "Whatsapp Lead Field Mapping",

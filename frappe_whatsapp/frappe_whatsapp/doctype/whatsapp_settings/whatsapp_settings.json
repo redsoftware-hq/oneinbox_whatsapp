@@ -16,6 +16,7 @@
   "app_id",
   "webhook_verify_token",
   "lead_reference_doctype",
+  "mapping_saved",
   "section_break_fttl",
   "whatsapp_lead_field_mapping"
  ],
@@ -81,12 +82,19 @@
    "fieldtype": "Table",
    "label": "Whatsapp Lead Field Mapping",
    "options": "Whatsapp Lead Field Mapping"
+  },
+  {
+   "default": "0",
+   "fieldname": "mapping_saved",
+   "fieldtype": "Check",
+   "hidden": 1,
+   "label": "mapping saved"
   }
  ],
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2025-03-03 14:03:38.165090",
+ "modified": "2025-03-18 14:28:36.712481",
  "modified_by": "Administrator",
  "module": "Frappe Whatsapp",
  "name": "WhatsApp Settings",

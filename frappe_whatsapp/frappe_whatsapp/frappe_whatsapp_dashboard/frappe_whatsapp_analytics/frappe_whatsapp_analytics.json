@@ -1,0 +1,31 @@
+{
+ "cards": [
+  {
+   "card": "Total WhatsApp Contact"
+  },
+  {
+   "card": "Total Converted Leads"
+  },
+  {
+   "card": "Number Of Unique Contact"
+  }
+ ],
+ "charts": [
+  {
+   "chart": "Daily Unread Message Count",
+   "width": "Full"
+  }
+ ],
+ "creation": "2025-03-19 12:35:51.751270",
+ "dashboard_name": "Frappe Whatsapp Analytics",
+ "docstatus": 0,
+ "doctype": "Dashboard",
+ "idx": 0,
+ "is_default": 0,
+ "is_standard": 1,
+ "modified": "2025-03-19 14:41:28.789647",
+ "modified_by": "Administrator",
+ "module": "Frappe Whatsapp",
+ "name": "Frappe Whatsapp Analytics",
+ "owner": "Administrator"
+}

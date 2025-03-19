@@ -3,6 +3,9 @@
 
 from __future__ import unicode_literals
 import frappe
+import frappe
+from frappe.utils import get_url
+from frappe import _
 
 no_cache = 1
 
@@ -14,6 +17,16 @@ def get_context(context):
 	context = frappe._dict()
 	context.boot = get_boot()
 	return context
+
+
+def get_context(context):
+    if frappe.session.user == "Guest":
+        frappe.local.flags.redirect_location = "/login"
+        raise frappe.Redirect
+    
+    context = frappe._dict()
+    context.boot = get_boot()
+    return context
 
 
 @frappe.whitelist( allow_guest=True)

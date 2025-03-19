@@ -33,6 +33,8 @@ const isLoading = ref(false);
 const whatsappMessages = ref([]);
 const user_update = ref(false);
 const isMappingSet = ref(false);
+const messagecount=ref(null)
+
 
 const fetchContacts = async () => {
   try {
@@ -52,7 +54,7 @@ const resetMessageCount = async (phone) => {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "X-Frappe-CSRF-Token": window.frappe.csrf_token,
+            "X-Frappe-CSRF-Token": window.csrf_token||window.frappe.csrf_token,
           },
           body: JSON.stringify({ phone }),
         });
@@ -77,7 +79,11 @@ const fetchMessages = async () => {
      }).fetch();
  
      whatsappMessages.value = response.sort((a, b) => new Date(a.creation) - new Date(b.creation));
-     resetMessageCount(selectedPhone.value.number);
+     
+     
+     if(selectedPhone?.value?.unread_message_count>0)
+      resetMessageCount(selectedPhone.value.number);
+    
      scrollToBottom();
    } catch (error) {
      console.error("Error fetching messages:", error);
@@ -164,9 +170,10 @@ onMounted(async () => {
 
         contacts.value = [...contacts.value];
 
-        if (selectedContact.value && selectedContact.value === data.phone) {
-          resetMessageCount(selectedContact.value);
-        }
+        // if (selectedContact.value && selectedContact.value === data.phone) {
+          
+        //   resetMessageCount(selectedContact.value);
+        // }
 });
 
 
@@ -184,12 +191,12 @@ $socket.onAny((event, data) => {
   emitter.on('contact-selected', (data) => {
     if (!selectedPhone.value || selectedPhone.value.number !== data.number) {
       selectedPhone.value = data;
-      fetchMessages(); // ✅ Fetch messages immediately on selection
+      fetchMessages();
     }
+    
   });
 });
 
-// ✅ Ensure smooth scrolling on new messages
 const scrollToBottom = () => {
   nextTick(() => {
     const el = document.querySelector('.messages-container');
@@ -197,7 +204,6 @@ const scrollToBottom = () => {
   });
 };
 
-// ✅ Cleanup WebSocket listeners
 onBeforeUnmount(() => {
   if ($socket) {
     $socket.off('oneinbox_whatsapp_message');
@@ -219,9 +225,7 @@ onBeforeUnmount(() => {
           <h1>Whatsapp</h1>
         </div>
       </div>
-      <h1 class="w-full text-red-500" v-if="!isMappingSet">
-  Lead Mapping is Not Configured Yet
-</h1>
+
 
 
       </div>
@@ -229,7 +233,7 @@ onBeforeUnmount(() => {
 
     <div class="flex h-screen overflow-hidden">
       <div class="w-1/5 h-screen">
-        <WhatsappSidebar :contacts="contacts" :user_update="user_update" :socket="$socket" />
+        <WhatsappSidebar :contacts="contacts" :user_update="user_update" :socket="$socket" :messagecount="messagecount" />
       </div>
 
       <div class="whatsapp-chat-container h-screen w-full flex-col">
@@ -239,7 +243,10 @@ onBeforeUnmount(() => {
             <h2 class="text-sm font-semibold text-gray-800">{{ selectedPhone?.name || '' }}</h2>
           </div>
           <div class="flex items-center space-x-4">
-            <Button @click="showAddLeadModal = true" class="bg-gray-700 text-black" :showAddLeadModal="showAddLeadModal" :disabled="!isMappingSet" >+ Add Lead</Button>
+            <Button @click="showAddLeadModal = true" class="bg-gray-700 text-black" 
+              :showAddLeadModal="showAddLeadModal" 
+              :disabled="!isMappingSet"  
+              :title="!isMappingSet ? 'Please Configure Lead mapping before adding a lead' : ''">+ Add Lead</Button>
             <Button @click="showWhatsappTemplates = true" :disabled="!isMappingSet">Send Template</Button>
           </div>
         </div>

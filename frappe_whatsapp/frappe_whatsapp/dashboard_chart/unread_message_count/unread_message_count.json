@@ -1,0 +1,32 @@
+{
+ "chart_name": "Unread Message Count",
+ "chart_type": "Report",
+ "creation": "2025-03-19 14:25:08.022591",
+ "docstatus": 0,
+ "doctype": "Dashboard Chart",
+ "dynamic_filters_json": "{}",
+ "filters_json": "{}",
+ "group_by_type": "Count",
+ "idx": 0,
+ "is_public": 0,
+ "is_standard": 1,
+ "modified": "2025-03-19 14:37:18.542851",
+ "modified_by": "Administrator",
+ "module": "Frappe Whatsapp",
+ "name": "Unread Message Count",
+ "number_of_groups": 0,
+ "owner": "Administrator",
+ "report_name": "Unread Message Count",
+ "roles": [],
+ "time_interval": "Yearly",
+ "timeseries": 0,
+ "timespan": "Last Year",
+ "type": "Line",
+ "use_report_chart": 0,
+ "x_field": "modified",
+ "y_axis": [
+  {
+   "y_field": "total_unread"
+  }
+ ]
+}

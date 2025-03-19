@@ -81,6 +81,7 @@ export default {
     user_update: Boolean,
     socket: Object,
     csrfToken: String,
+    messagecount:Number
   },
 
   setup(props) {
@@ -130,16 +131,19 @@ export default {
     };
 
     watch(search, (newSearch) => {
-      page = 0; // Reset pagination when search changes
+      page = 0;
       contacts.value = []; // Clear current contacts
       fetchContacts(newSearch); // Fetch new results based on search term
     });
 
     const selectContact = (contact) => {
       selectedContact.value = contact.phone;
+      props.messagecount=contact.unread_message_count
       emitter.emit("contact-selected", {
         number: contact.phone,
         name: contact.whatsapp_name,
+        unread_message_count:contact.unread_message_count
+
       });
       localStorage.setItem("selectedContact", JSON.stringify(contact));
       emitter.emit("contact-selected-refresh");

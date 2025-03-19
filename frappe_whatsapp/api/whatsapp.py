@@ -258,11 +258,9 @@ def get_whatsapp_contact(start=0, page_length=20, search_term=None):
         search_pattern = f"%{search_term}%"
         query_params.extend([search_pattern, search_pattern])
 
-    # Add order by and pagination
     query += " ORDER BY last_message_time DESC LIMIT %s OFFSET %s"
     query_params.extend([page_length, start])
 
-    # Execute query
     whatsapp_contacts = frappe.db.sql(query, query_params, as_dict=True)
 
     return whatsapp_contacts
@@ -386,7 +384,6 @@ def reset_unread_count(phone):
             filters={"phone": phone},
             fields=["name"]
         )
-
         if user_doc:
             user_doc = frappe.get_doc("WhatsApp Contact", user_doc[0]["name"])
             user_doc.unread_message_count = 0

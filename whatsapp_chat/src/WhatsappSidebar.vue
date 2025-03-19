@@ -156,6 +156,8 @@ export default {
           }
 
           if (existingIndex !== -1) {
+            if(data.changed_fields.includes("unread_message_count")&&data.phone==selectedContact.value)
+            data = { ...data, unread_message_count: 0 };
             const existingContact = contacts.value[existingIndex];
             contacts.value.splice(existingIndex, 1);
             contacts.value.unshift({ ...existingContact, ...data });

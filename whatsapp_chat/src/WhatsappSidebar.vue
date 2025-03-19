@@ -148,6 +148,18 @@ export default {
     onMounted(() => {
       fetchContacts();
       if (props.socket) {
+        props.socket.on('oneinbox_whatsapp_message', (data) => {
+      if(selectedContact.value !== data.from ) {
+        const index = contacts.value.findIndex(contact => contact.phone === data.from);
+      if (index !== -1) {
+      const contact = contacts.value[index];
+      contact.unread_message_count = (contact.unread_message_count || 0) + 1;
+      contacts.value.splice(index, 1);
+      contacts.value.unshift(contact);
+      contacts.value = [contact, ...contacts.value];
+    }
+  }
+});
         props.socket.on("whatsapp_contact_update", (data) => {
           const existingIndex = contacts.value.findIndex((c) => c.phone === data.phone);
 
@@ -156,12 +168,16 @@ export default {
           }
 
           if (existingIndex !== -1) {
-            if(data.changed_fields.includes("unread_message_count")&&data.phone==selectedContact.value)
+            if(data.changed_fields.includes("unread_message_count")&&data.phone===selectedContact.value)
             data = { ...data, unread_message_count: 0 };
             const existingContact = contacts.value[existingIndex];
             contacts.value.splice(existingIndex, 1);
             contacts.value.unshift({ ...existingContact, ...data });
-          } else {
+
+            
+          } 
+          
+          else {
             contacts.value.unshift(data);
           }
 

@@ -52,7 +52,7 @@ const resetMessageCount = async (phone) => {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "X-Frappe-CSRF-Token": window.csrf_token || window.frappe.csrf_token,
+            "X-Frappe-CSRF-Token": window.frappe.csrf_token,
           },
           body: JSON.stringify({ phone }),
         });
@@ -62,6 +62,7 @@ const resetMessageCount = async (phone) => {
     };
 
 
+// ✅ Fetch messages in real-time
 const fetchMessages = async () => {
   if (!selectedPhone.value) return;
   
@@ -122,67 +123,73 @@ onMounted(async () => {
     console.error("Error fetching API:", error);
   }
   fetchContacts();
-  if ($socket) {
-  $socket.on('oneinbox_whatsapp_message', (data) => {
-    if (
-      selectedPhone.value &&
-      (data.from === selectedPhone.value.number || data.to === selectedPhone.value.phone)
-    ) {
-      whatsappMessages.value.push(data);
-      whatsappMessages.value.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-      nextTick(scrollToBottom);
-    }
-  });
 
-  $socket.on('whatsapp_contact_update', async (data) => {
+  if ($socket) {
+    $socket.on('oneinbox_whatsapp_message', (data) => {
+      if (
+        selectedPhone.value &&
+        (selectedPhone.value.number === data.from || selectedPhone.value.number === data.to)
+      ) {
+        whatsappMessages.value.push(data);
+        whatsappMessages.value.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+        nextTick(scrollToBottom);
+      } else {
+        const index = contacts.value.findIndex(contact => contact.phone === data.from);
+    if (index !== -1) {
+      const contact = contacts.value[index];
+      contacts.value.splice(index, 1);
+      contacts.value.unshift(contact);
+      contacts.value = [contact, ...contacts.value];
+    }
+  }
+});
+
+
+    $socket.on('whatsapp_contact_update', async (data) => {
     await fetchContacts();
 
-    // if (selectedPhone.value && selectedPhone.value.number === data.phone) {
-    //   return;
-    // }
-
-    if (data.changed_fields.includes("unread_message_count") && selectedPhone.value && selectedPhone.value.number === data.phone){
-       return ;
+    if (selectedPhone.value && selectedPhone.value.number === data.phone) {
+      
+        return;
     }
+    
 
     const existingIndex = contacts.value.findIndex((c) => c.phone === data.phone);
-    
-    if (existingIndex !== -1) {
-      const existingContact = contacts.value[existingIndex];
-      if (!data.changed_fields || data.changed_fields.length === 0) {
-          return;
-          }
-      if (data.changed_fields.includes("last_message_time") && selectedPhone.value.number !== data.phone ) {
-        contacts.value.splice(existingIndex, 1);
+        if (existingIndex !== -1) {
+          const [existingContact] = contacts.value.splice(existingIndex, 1);
         contacts.value.unshift({ ...existingContact, ...data });
-      } else if (data.changed_fields.includes("unread_message_count") && selectedPhone.value && selectedPhone.value.number !== data.phone ) {
-        contacts.value[existingIndex] = { ...existingContact, ...data };
-      }
-    } 
-    // else {
-    //   contacts.value.unshift(data);
-    // }
+        } else {
+          contacts.value.unshift(data);
+        }
 
-    // contacts.value = [...contacts.value];
-    if (selectedContact.value === data.phone) {
-      resetMessageCount(selectedContact.value);
-    }
-  });
-}
+        contacts.value = [...contacts.value];
 
+        if (selectedContact.value && selectedContact.value === data.phone) {
+          resetMessageCount(selectedContact.value);
+        }
+});
+
+
+$socket.onAny((event, data) => {
+});
+    $socket.on('lead_submission_completed', async () => {
+      await fetchContacts();
+    });
+  }
   emitter.on('lead_submission_started', ()=>isLoading.value = true);
-  emitter.on("cancel_clicked",()=>console.log("herere"))
-  
+  emitter.on('lead_submission_process_error', ()=>isLoading.value = false);
 
-  emitter.on('lead_submission_process_completed', ()=>{showWhatsappTemplates = false,window.location.reload()});
+  emitter.on('lead_submission_process_completed', ()=>{isLoading.value = false,window.location.reload()});
+  emitter.on("message_sent",(data)=>{whatsappMessages.value.push(data);fetchMessages()})
   emitter.on('contact-selected', (data) => {
     if (!selectedPhone.value || selectedPhone.value.number !== data.number) {
       selectedPhone.value = data;
-      fetchMessages(); 
+      fetchMessages(); // ✅ Fetch messages immediately on selection
     }
   });
 });
 
+// ✅ Ensure smooth scrolling on new messages
 const scrollToBottom = () => {
   nextTick(() => {
     const el = document.querySelector('.messages-container');
@@ -190,6 +197,7 @@ const scrollToBottom = () => {
   });
 };
 
+// ✅ Cleanup WebSocket listeners
 onBeforeUnmount(() => {
   if ($socket) {
     $socket.off('oneinbox_whatsapp_message');
@@ -211,7 +219,9 @@ onBeforeUnmount(() => {
           <h1>Whatsapp</h1>
         </div>
       </div>
-      
+      <h1 class="w-full text-red-500" v-if="!isMappingSet">
+  Lead Mapping is Not Configured Yet
+</h1>
 
 
       </div>
@@ -229,15 +239,7 @@ onBeforeUnmount(() => {
             <h2 class="text-sm font-semibold text-gray-800">{{ selectedPhone?.name || '' }}</h2>
           </div>
           <div class="flex items-center space-x-4">
-            <Button 
-            @click="showAddLeadModal = true" 
-            class="bg-gray-700 text-black" 
-            :showAddLeadModal="showAddLeadModal" 
-            :disabled="!isMappingSet" 
-            :title="isMappingSet ? 'Click to add a new lead' : 'Lead Mapping is Not Configured  In Whatsapp Config Yet'"
-            >
-            + Add Lead
-            </Button>
+            <Button @click="showAddLeadModal = true" class="bg-gray-700 text-black" :showAddLeadModal="showAddLeadModal" :disabled="!isMappingSet" >+ Add Lead</Button>
             <Button @click="showWhatsappTemplates = true" :disabled="!isMappingSet">Send Template</Button>
           </div>
         </div>

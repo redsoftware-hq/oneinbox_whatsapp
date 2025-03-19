@@ -1,0 +1,37 @@
+{
+ "chart_name": "Lead Conversion Stats",
+ "chart_type": "Report",
+ "creation": "2025-03-19 18:28:25.665040",
+ "docstatus": 0,
+ "doctype": "Dashboard Chart",
+ "dynamic_filters_json": "{}",
+ "filters_json": "{}",
+ "group_by_type": "Count",
+ "idx": 0,
+ "is_public": 0,
+ "is_standard": 1,
+ "modified": "2025-03-19 18:38:05.544338",
+ "modified_by": "Administrator",
+ "module": "Frappe Whatsapp",
+ "name": "Lead Conversion Stats",
+ "number_of_groups": 0,
+ "owner": "Administrator",
+ "report_name": "Lead Conversion Stats",
+ "roles": [
+  {
+   "role": "WhatsApp Manager"
+  }
+ ],
+ "time_interval": "Yearly",
+ "timeseries": 0,
+ "timespan": "Last Year",
+ "type": "Line",
+ "use_report_chart": 0,
+ "x_field": "conversion_date",
+ "y_axis": [
+  {
+   "color": "#761ACB",
+   "y_field": "lead_count"
+  }
+ ]
+}

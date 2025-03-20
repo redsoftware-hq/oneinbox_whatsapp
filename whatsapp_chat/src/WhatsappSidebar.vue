@@ -25,7 +25,10 @@
           v-for="contact in contacts"
           :key="contact.phone"
           class="flex items-center justify-between p-4 cursor-pointer transition duration-200 hover:bg-gray-100 border-b border-gray-300 bg-white w-full"
-          :class="{ 'bg-blue-100': selectedContact === contact.phone }"
+          :class="{ 
+  'after_select': selectedContact === contact.phone, 
+}"
+
           @click="selectContact(contact)"
         >
           <div class="flex flex-col w-full h-full">
@@ -67,13 +70,18 @@
     </div>
   </div>
 </template>
-
+<style>
+.after_select{
+  background-color:rgb(243, 244, 246) !important;
+  color: white !important;
+}
+</style>
 <script>
 import { Badge } from "frappe-ui";
 import { format, isToday, isYesterday } from "date-fns";
 import { emitter } from "./utils/eventBus.js";
 import { ref, watch, onMounted } from "vue";
-const csrfToken = window.csrf_token || window.frappe.csrf_token || frappe.csrf_token;
+const csrfToken = window.csrf_token || window.frappe?.csrf_token || window.frappe?.csrf_token;
 
 
 export default {

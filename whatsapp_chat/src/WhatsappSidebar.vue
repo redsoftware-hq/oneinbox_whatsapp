@@ -72,7 +72,7 @@
 </template>
 <style>
 .after_select{
-  background-color: cadetblue !important;
+  background-color:rgb(243, 244, 246) !important;
   color: white !important;
 }
 </style>

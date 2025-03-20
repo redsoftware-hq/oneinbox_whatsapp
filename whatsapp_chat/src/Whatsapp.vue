@@ -12,7 +12,7 @@ import { emitter } from './utils/eventBus';
 
 const app = getCurrentInstance();
 const { $socket } = app.appContext.config.globalProperties;
-const csrfToken = window.frappe ? window.frappe.csrf_token : '';
+const csrfToken = window.csrf_token || window.frappe.csrf_token || frappe.csrf_token;
 
 const props = defineProps({
   doctype: String,
@@ -54,7 +54,7 @@ const resetMessageCount = async (phone) => {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "X-Frappe-CSRF-Token": window.csrf_token||window.frappe.csrf_token,
+            "X-Frappe-CSRF-Token": csrfToken,
           },
           body: JSON.stringify({ phone }),
         });
@@ -74,7 +74,7 @@ const fetchMessages = async () => {
        params: { phone: selectedPhone.value.number },
        auto: false,
        headers: {
-        'X-Frappe-CSRF-Token': frappe.csrf_token
+        'X-Frappe-CSRF-Token': csrfToken
       }
      }).fetch();
  
@@ -100,7 +100,7 @@ async function sendTemplate(template) {
       },
       auto: true,
       headers: {
-        'X-Frappe-CSRF-Token': frappe.csrf_token
+        'X-Frappe-CSRF-Token': csrfToken
       }
     }).fetch()
 
@@ -118,7 +118,7 @@ onMounted(async () => {
     const response = await fetch('/api/method/frappe_whatsapp.api.whatsapp.is_mapping_set', {
       method: 'GET',
       headers: {
-        'X-Frappe-CSRF-Token': window.frappe ? window.frappe.csrf_token : '',
+        'X-Frappe-CSRF-Token': csrfToken,
         'Content-Type': 'application/json',
       },
     });
@@ -187,7 +187,7 @@ $socket.onAny((event, data) => {
   emitter.on('lead_submission_process_error', ()=>isLoading.value = false);
 
   emitter.on('lead_submission_process_completed', ()=>{isLoading.value = false,window.location.reload()});
-  emitter.on("message_sent",(data)=>{whatsappMessages.value.push(data);fetchMessages()})
+  // emitter.on("message_sent",(data)=>{whatsappMessages.value.push(data);fetchMessages()})
   emitter.on('contact-selected', (data) => {
     if (!selectedPhone.value || selectedPhone.value.number !== data.number) {
       selectedPhone.value = data;

@@ -73,6 +73,8 @@ import { Badge } from "frappe-ui";
 import { format, isToday, isYesterday } from "date-fns";
 import { emitter } from "./utils/eventBus.js";
 import { ref, watch, onMounted } from "vue";
+const csrfToken = window.csrf_token || window.frappe.csrf_token || frappe.csrf_token;
+
 
 export default {
   name: "WhatsappSidebar",
@@ -101,7 +103,7 @@ export default {
         const response = await fetch(
           `/api/method/frappe_whatsapp.api.whatsapp.get_whatsapp_contact?start=${page * pageSize}&page_length=${pageSize}&search_term=${encodeURIComponent(searchTerm)}`,
           {
-            headers: { "X-Frappe-CSRF-Token": props.csrfToken },
+            headers: { "X-Frappe-CSRF-Token": csrfToken },
           }
         );
         const data = await response.json();

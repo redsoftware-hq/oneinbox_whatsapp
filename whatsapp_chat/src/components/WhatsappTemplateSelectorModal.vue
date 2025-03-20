@@ -56,7 +56,7 @@
 import { TextEditor, createListResource } from 'frappe-ui'
 import { ref, computed, nextTick, watch, onMounted, defineModel } from 'vue'
 
-const csrfToken = window.frappe?.csrf_token || window.frappe?.csrf_token // ✅ Fixed CSRF token access
+const csrfToken = window.csrf_token || window.frappe?.csrf_token
 
 const props = defineProps({
   doctype: String,

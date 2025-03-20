@@ -70,6 +70,8 @@ import { createResource, Textarea, FileUploader, Dropdown } from 'frappe-ui'
 import { ref, nextTick, watch, defineModel } from 'vue'
 // import { defineModel } from 'vue';
 import { emitter } from './utils/eventBus';
+const csrfToken = window.csrf_token || window.frappe.csrf_token || frappe.csrf_token;
+
 
 
 // Define the translation function
@@ -132,7 +134,7 @@ async function sendWhatsAppMessage() {
     params: args,
     auto: true,
     headers: {
-      'X-Frappe-CSRF-Token': window.frappe.csrf_token || frappe.csrf_token || window.csrf_token,
+      'X-Frappe-CSRF-Token': csrfToken
     }
   });
   

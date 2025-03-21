@@ -1,0 +1,32 @@
+{
+ "chart_name": "Unique Number Contacted",
+ "chart_type": "Report",
+ "creation": "2025-03-21 10:43:50.546062",
+ "docstatus": 0,
+ "doctype": "Dashboard Chart",
+ "dynamic_filters_json": "{}",
+ "filters_json": "{}",
+ "group_by_type": "Count",
+ "idx": 0,
+ "is_public": 0,
+ "is_standard": 1,
+ "modified": "2025-03-21 10:43:56.590169",
+ "modified_by": "Administrator",
+ "module": "Frappe Whatsapp",
+ "name": "Unique Number Contacted",
+ "number_of_groups": 0,
+ "owner": "Administrator",
+ "report_name": "Unique Number Contacted",
+ "roles": [],
+ "time_interval": "Yearly",
+ "timeseries": 0,
+ "timespan": "Last Year",
+ "type": "Line",
+ "use_report_chart": 0,
+ "x_field": "date_of_contact",
+ "y_axis": [
+  {
+   "y_field": "contact_number"
+  }
+ ]
+}

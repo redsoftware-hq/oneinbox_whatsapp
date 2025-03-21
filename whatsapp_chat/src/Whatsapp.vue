@@ -136,8 +136,7 @@ onMounted(async () => {
         selectedPhone.value &&
         (selectedPhone.value.number === data.from || selectedPhone.value.number === data.to)
       ) {
-        // whatsappMessages.value.push(data);
-        fetchMessages()
+        whatsappMessages.value.push(data);
         whatsappMessages.value.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
         nextTick(scrollToBottom);
       } else {
@@ -152,30 +151,30 @@ onMounted(async () => {
 });
 
 
-    $socket.on('whatsapp_contact_update', async (data) => {
-    await fetchContacts();
+//     $socket.on('whatsapp_contact_update', async (data) => {
+//     await fetchContacts();
 
-    if (selectedPhone.value && selectedPhone.value.number === data.phone) {
+//     if (selectedPhone.value && selectedPhone.value.number === data.phone) {
       
-        return;
-    }
+//         return;
+//     }
     
 
-    const existingIndex = contacts.value.findIndex((c) => c.phone === data.phone);
-        if (existingIndex !== -1) {
-          const [existingContact] = contacts.value.splice(existingIndex, 1);
-        contacts.value.unshift({ ...existingContact, ...data });
-        } else {
-          contacts.value.unshift(data);
-        }
+//     const existingIndex = contacts.value.findIndex((c) => c.phone === data.phone);
+//         if (existingIndex !== -1) {
+//           const [existingContact] = contacts.value.splice(existingIndex, 1);
+//         contacts.value.unshift({ ...existingContact, ...data });
+//         } else {
+//           contacts.value.unshift(data);
+//         }
 
-        contacts.value = [...contacts.value];
+//         contacts.value = [...contacts.value];
 
-        // if (selectedContact.value && selectedContact.value === data.phone) {
+//         // if (selectedContact.value && selectedContact.value === data.phone) {
           
-        //   resetMessageCount(selectedContact.value);
-        // }
-});
+//         //   resetMessageCount(selectedContact.value);
+//         // }
+// });
 
 
 $socket.onAny((event, data) => {

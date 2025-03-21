@@ -170,20 +170,19 @@ def create_whatsapp_message(
                 "reply_to_message_id": reply_doc.message_id,
             }
         )
+    print(content_type,message)
+    # doc.update(
+    #     {
 
-    doc.update(
-        {
-            # "reference_doctype": reference_doctype,
-            # "reference_name": reference_name,
-            "message": message or attach,
-            "to": to,
-            "attach": attach,
-            "content_type": content_type,
-            "type": type,
-        }
-    )
-    doc.insert(ignore_permissions=True)
-    return doc.name
+    #         "message": message or attach,
+    #         "to": to,
+    #         "attach": attach,
+    #         "content_type": content_type,
+    #         "type": type,
+    #     }
+    # )
+    # doc.insert(ignore_permissions=True)
+    # return doc.name
 
 @frappe.whitelist()
 def send_whatsapp_template(template, to):

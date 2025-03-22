@@ -25,7 +25,7 @@
  "is_standard": "Yes",
  "json": "{}",
  "letterhead": null,
- "modified": "2025-03-19 18:32:25.938878",
+ "modified": "2025-03-21 11:03:48.375582",
  "modified_by": "Administrator",
  "module": "Frappe Whatsapp",
  "name": "Lead Conversion Stats",
@@ -34,7 +34,7 @@
  "query": "SELECT COUNT(phone) AS lead_count, DATE(modified) AS conversion_date\nFROM `tabWhatsApp Contact`\nWHERE is_lead = 1\nGROUP BY conversion_date\nORDER BY conversion_date;\n",
  "ref_doctype": "WhatsApp Contact",
  "report_name": "Lead Conversion Stats",
- "report_type": "Query Report",
+ "report_type": "Script Report",
  "roles": [
   {
    "role": "System Manager"

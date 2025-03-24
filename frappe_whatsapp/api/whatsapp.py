@@ -321,6 +321,7 @@ def save_as_lead(data, doctype):
             UPDATE `tabWhatsApp Message`
             SET reference_doctype = %s, reference_name = %s
             WHERE `from` LIKE %s OR `from` LIKE %s
+        
         """
 
         frappe.db.sql(query, (doctype, doc.name, variation, variation))

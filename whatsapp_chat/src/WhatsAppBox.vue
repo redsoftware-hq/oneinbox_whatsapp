@@ -67,8 +67,7 @@ import IconPicker from './components/IconPicker.vue'
 import SmileIcon from './components/Icons/SmileIcon.vue'
 // import {createResource} from '@frappe-ui/resources/index.js'
 import { createResource, Textarea, FileUploader, Dropdown } from 'frappe-ui'
-import { ref, nextTick, watch, defineModel } from 'vue'
-// import { defineModel } from 'vue';
+import { ref, nextTick, watch, defineModel, onMounted } from 'vue'
 import { emitter } from './utils/eventBus';
 const csrfToken = window.csrf_token || window.frappe.csrf_token || frappe.csrf_token;
 
@@ -91,7 +90,7 @@ const textareaRef = ref(null)
 const emoji = ref('')
 
 const content = ref('')
-const placeholder = ref(__('Type your message here...'))
+const placeholder = ref(__('Type your message here.....'))
 const fileType = ref('')
 
 function show() {
@@ -172,8 +171,13 @@ function uploadOptions(openFileSelector) {
   ]
 }
 
+onMounted(() => {
+  console.log("Initial reply:", reply.value);
+}); 
+
 watch(reply, (value) => {
   if (value?.message) {
+    console.log(reply)
     show()
   }
 })

@@ -170,11 +170,11 @@ export default {
       contact.unread_message_count = (contact.unread_message_count || 0) + 1;
       contacts.value.splice(index, 1);
       contacts.value.unshift(contact);
-      contacts.value = [contact, ...contacts.value];
     }
   }
 });
         props.socket.on("whatsapp_contact_update", (data) => {
+          resetMessageCount(data.phone)
           const existingIndex = contacts.value.findIndex((c) => c.phone === data.phone);
 
           if (!data.changed_fields || data.changed_fields.length === 0) {
@@ -187,7 +187,6 @@ export default {
             const existingContact = contacts.value[existingIndex];
             contacts.value.splice(existingIndex, 1);
             contacts.value.unshift({ ...existingContact, ...data });
-
             
           } 
           
@@ -216,6 +215,22 @@ export default {
         formattedTime = format(lastInteraction, "dd/MM/yy");
       }
       return formattedTime;
+    };
+      
+    const resetMessageCount = async (phone) => {
+      if (!phone) return;
+      try {
+        await fetch("/api/method/frappe_whatsapp.api.whatsapp.reset_unread_count", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Frappe-CSRF-Token": csrfToken,
+          },
+          body: JSON.stringify({ phone }),
+        });
+      } catch (error) {
+        console.error("Error resetting message count:", error);
+      }
     };
 
     return {

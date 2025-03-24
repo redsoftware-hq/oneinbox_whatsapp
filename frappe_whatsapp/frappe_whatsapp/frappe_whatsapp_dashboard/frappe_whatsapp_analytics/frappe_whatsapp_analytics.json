@@ -19,7 +19,7 @@
    "width": "Full"
   },
   {
-   "chart": "Unique Number Contacted",
+   "chart": "Unique Number Conversed",
    "width": "Full"
   }
  ],
@@ -30,7 +30,7 @@
  "idx": 0,
  "is_default": 0,
  "is_standard": 1,
- "modified": "2025-03-21 10:44:34.806517",
+ "modified": "2025-03-24 19:20:11.547570",
  "modified_by": "Administrator",
  "module": "Frappe Whatsapp",
  "name": "Frappe Whatsapp Analytics",

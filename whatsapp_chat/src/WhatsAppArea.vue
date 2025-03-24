@@ -154,7 +154,7 @@
         >
           <Button
             @click="() => (reaction = true) && togglePopover()"
-            class="rounded-full !size-6 mt-0.5"
+            class="rounded-full !size-8 mt-0.5"
           >
             <ReactIcon class="text-gray-400" />
           </Button>
@@ -176,11 +176,13 @@ import DocumentIcon from './components/Icons/DocumentIcon.vue'
 import ReactIcon from './components/Icons/ReactIcon.vue'
 import { Tooltip, Dropdown, createResource } from 'frappe-ui'
 import { ref } from 'vue'
+import { emitter } from './utils/eventBus';
 
 const emoji = ref('')
 const reaction = ref(true)
 const reply = defineModel('reply')
 const replyMode = ref(false)
+const csrfToken=window.csrf_token||window.frappe?.csrf_token
 
 function reactOnMessage(name, emoji) {
   createResource({
@@ -191,7 +193,7 @@ function reactOnMessage(name, emoji) {
     },
     auto: true,
     headers: {
-      'X-Frappe-CSRF-Token': frappe.csrf_token
+      'X-Frappe-CSRF-Token': csrfToken
     },
     onSuccess() {
       list.value.reload()
@@ -223,6 +225,7 @@ function messageOptions(message) {
       label: 'Reply',
       onClick: () => {
         replyMode.value = true
+        emitter.emit("reply_mode",message)
         reply.value = {
           ...message,
           message: formatWhatsAppMessage(message.message)
@@ -258,13 +261,25 @@ const formatDate = (dateString) => {
 };
 
 function formatWhatsAppMessage(message) {
+   // if message contains _text_, make it italic
+   message = message.replace(/_(.*?)_/g, '<i>$1</i>')
+  // if message contains *text*, make it bold
+  message = message.replace(/\*(.*?)\*/g, '<b>$1</b>')
+  // if message contains ~text~, make it strikethrough
+  message = message.replace(/~(.*?)~/g, '<s>$1</s>')
+  // if message contains ```text```, make it monospace
+  message = message.replace(/```(.*?)```/g, '<code>$1</code>')
+  // if message contains `text`, make it inline code
+  message = message.replace(/`(.*?)`/g, '<code>$1</code>')
+  // if message contains > text, make it a blockquote
+  message = message.replace(/^> (.*)$/gm, '<blockquote>$1</blockquote>')
+  // if contain /n, make it a new line
+  message = message.replace(/\n/g, '<br>')
+  // if contains *<space>text, make it a bullet point
+  message = message.replace(/\* (.*?)(?=\s*\*|$)/g, '<li>$1</li>')
+  message = message.replace(/- (.*?)(?=\s*-|$)/g, '<li>$1</li>')
+  message = message.replace(/(\d+)\. (.*?)(?=\s*(\d+)\.|$)/g, '<li>$2</li>')
+
   return message
-    .replace(/\*(.*?)\*/g, '<b>$1</b>') // Bold
-    .replace(/_(.*?)_/g, '<i>$1</i>') // Italic
-    .replace(/~(.*?)~/g, '<s>$1</s>') // Strikethrough
-    .replace(/```(.*?)```/g, '<code>$1</code>') // Code block
-    .replace(/`(.*?)`/g, '<code>$1</code>') // Inline code
-    .replace(/^> (.*)$/gm, '<blockquote>$1</blockquote>') // Blockquote
-    .replace(/\n/g, '<br>'); // New line
 }
 </script>

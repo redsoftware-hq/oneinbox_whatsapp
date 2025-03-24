@@ -18,18 +18,10 @@ def is_whatsapp_installed():
 
 
 @frappe.whitelist()
-def get_whatsapp_messages(reference_doctype = None, reference_name = None, phone = None):
+def get_whatsapp_messages(phone = None):
     if not frappe.db.exists("DocType", "WhatsApp Message"):
         return []
     messages = []
-
-    filters = {}
-
-    if reference_doctype and reference_name:
-        filters = {
-            "reference_doctype": reference_doctype,
-            "reference_name": reference_name,
-        }
 
     or_filters = None
     if phone:
@@ -41,7 +33,6 @@ def get_whatsapp_messages(reference_doctype = None, reference_name = None, phone
 
     messages += frappe.get_all(
         "WhatsApp Message",
-        filters=filters,
         or_filters= or_filters if or_filters else None,
         fields=[
             "name",
@@ -121,7 +112,7 @@ def get_whatsapp_messages(reference_doctype = None, reference_name = None, phone
         message["from_name"] = from_name
     # Filter messages to get only replies
     reply_messages = [message for message in messages if message["is_reply"]]
-
+    
     # Iterate through reply messages
     for reply_message in reply_messages:
         # Find the message that this message is replying to
@@ -134,7 +125,6 @@ def get_whatsapp_messages(reference_doctype = None, reference_name = None, phone
             None,
         )
 
-        # If the replied message is found, add the reply details to the reply message
         from_name = (
             get_from_name(reply_message) if replied_message["from"] else _("You")
         )
@@ -170,19 +160,18 @@ def create_whatsapp_message(
                 "reply_to_message_id": reply_doc.message_id,
             }
         )
-    print(content_type,message)
-    # doc.update(
-    #     {
+    doc.update(
+        {
 
-    #         "message": message or attach,
-    #         "to": to,
-    #         "attach": attach,
-    #         "content_type": content_type,
-    #         "type": type,
-    #     }
-    # )
-    # doc.insert(ignore_permissions=True)
-    # return doc.name
+            "message": message or attach,
+            "to": to,
+            "attach": attach,
+            "content_type": content_type,
+            "type": type,
+        }
+    )
+    doc.insert(ignore_permissions=True)
+    return doc.name
 
 @frappe.whitelist()
 def send_whatsapp_template(template, to):
@@ -324,6 +313,14 @@ def save_as_lead(data, doctype):
             SET is_lead = 1, reference_doctype = %s, reference_name = %s
             WHERE phone LIKE %s OR phone LIKE %s
             LIMIT 1
+        """
+
+        frappe.db.sql(query, (doctype, doc.name, variation, variation))
+        
+        query = """
+            UPDATE `tabWhatsApp Message`
+            SET reference_doctype = %s, reference_name = %s
+            WHERE `from` LIKE %s OR `from` LIKE %s
         """
 
         frappe.db.sql(query, (doctype, doc.name, variation, variation))

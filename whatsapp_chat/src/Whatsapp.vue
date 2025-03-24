@@ -34,6 +34,8 @@ const whatsappMessages = ref([]);
 const user_update = ref(false);
 const isMappingSet = ref(false);
 const messagecount=ref(null)
+const reply = ref({});
+
 
 
 const fetchContacts = async () => {
@@ -64,7 +66,6 @@ const resetMessageCount = async (phone) => {
     };
 
 
-// ✅ Fetch messages in real-time
 const fetchMessages = async () => {
   if (!selectedPhone.value) return;
   
@@ -141,12 +142,12 @@ onMounted(async () => {
         nextTick(scrollToBottom);
       } else {
         const index = contacts.value.findIndex(contact => contact.phone === data.from);
-    if (index !== -1) {
-      const contact = contacts.value[index];
-      contacts.value.splice(index, 1);
-      contacts.value.unshift(contact);
-      contacts.value = [contact, ...contacts.value];
-    }
+    // if (index !== -1) {
+    //   const contact = contacts.value[index];
+    //   contacts.value.splice(index, 1);
+    //   contacts.value.unshift(contact);
+    //   contacts.value = [contact, ...contacts.value];
+    // }
   }
 });
 
@@ -187,9 +188,11 @@ $socket.onAny((event, data) => {
   emitter.on('lead_submission_process_error', ()=>isLoading.value = false);
 
   emitter.on('lead_submission_process_completed', ()=>{isLoading.value = false,window.location.reload()});
+  // emitter.on("reply_mode",(data)=>alert(JSON.stringify(data)))
   // emitter.on("message_sent",(data)=>{whatsappMessages.value.push(data);fetchMessages()})
   emitter.on('contact-selected', (data) => {
     if (!selectedPhone.value || selectedPhone.value.number !== data.number) {
+      resetMessageCount(data.number)
       selectedPhone.value = data;
       fetchMessages();
     }
@@ -261,11 +264,11 @@ onBeforeUnmount(() => {
         </div>
 
         <div v-else class="messages-container flex-1 p-4 overflow-y-auto bg-gray-200">
-          <WhatsAppArea class="px-3 sm:px-10" :messages="whatsappMessages" />
+          <WhatsAppArea class="px-3 sm:px-10" :messages="whatsappMessages"  v-bind:reply="reply" />
         </div>
 
         <div class="chat-box-container border-t-gray-200 mb-16">
-          <WhatsAppBox v-if="selectedPhone" :doctype="props.doctype" :docname="props.docname" :phone="selectedPhone?.number" @message-sent="fetchMessages" />
+          <WhatsAppBox v-if="selectedPhone" :doctype="props.doctype" :docname="props.docname" v-bind:reply="reply" :phone="selectedPhone?.number" @message-sent="fetchMessages" />
         </div>
 
         <WhatsappTemplateSelectorModal v-model="showWhatsappTemplates" :doctype="doctype" @send="(t) => sendTemplate(t)"/>

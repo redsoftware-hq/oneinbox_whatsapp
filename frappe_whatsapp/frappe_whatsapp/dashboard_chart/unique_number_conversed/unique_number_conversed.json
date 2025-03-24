@@ -1,0 +1,32 @@
+{
+ "chart_name": "Unique Number Conversed",
+ "chart_type": "Report",
+ "creation": "2025-03-24 19:19:58.128042",
+ "docstatus": 0,
+ "doctype": "Dashboard Chart",
+ "dynamic_filters_json": "{}",
+ "filters_json": "{\"from_date\":\"2025-03-17\",\"to_date\":\"2025-03-24\"}",
+ "group_by_type": "Count",
+ "idx": 0,
+ "is_public": 0,
+ "is_standard": 1,
+ "modified": "2025-03-24 19:20:05.290226",
+ "modified_by": "Administrator",
+ "module": "Frappe Whatsapp",
+ "name": "Unique Number Conversed",
+ "number_of_groups": 0,
+ "owner": "Administrator",
+ "report_name": "Unique Number Conversed",
+ "roles": [],
+ "time_interval": "Yearly",
+ "timeseries": 0,
+ "timespan": "Last Year",
+ "type": "Line",
+ "use_report_chart": 0,
+ "x_field": "date_of_contact",
+ "y_axis": [
+  {
+   "y_field": "contact_number"
+  }
+ ]
+}

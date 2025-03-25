@@ -190,13 +190,14 @@ $socket.onAny((event, data) => {
   emitter.on('lead_submission_process_completed', ()=>{isLoading.value = false,window.location.reload()});
   // emitter.on("reply_mode",(data)=>alert(JSON.stringify(data)))
   // emitter.on("message_sent",(data)=>{whatsappMessages.value.push(data);fetchMessages()})
-  emitter.on('contact-selected', (data) => {
-    if (!selectedPhone.value || selectedPhone.value.number !== data.number) {
-      resetMessageCount(data.number)
-      selectedPhone.value = data;
-    }
+  // emitter.on('contact-selected', (data) => {
+  //   if (!selectedPhone.value || selectedPhone.value.number !== data.number) {
+  //     resetMessageCount(data.number)
+  //     selectedPhone.value = data;
+  //     fetchMessages();
+  //   }
     
-  });
+  // });
 });
 
 const scrollToBottom = () => {
@@ -267,7 +268,7 @@ onBeforeUnmount(() => {
         </div>
 
         <div class="chat-box-container border-t-gray-200 mb-16">
-          <WhatsAppBox v-if="selectedPhone" :doctype="props.doctype" :docname="props.docname" v-bind:reply="reply" :phone="selectedPhone?.number" @message-sent="fetchMessages" />
+          <WhatsAppBox v-if="selectedPhone" :doctype="props.doctype" :docname="props.docname"  v-bind:reply="reply" :phone="selectedPhone?.number" @message-sent="fetchMessages" />
         </div>
 
         <WhatsappTemplateSelectorModal v-model="showWhatsappTemplates" :doctype="doctype" @send="(t) => sendTemplate(t)"/>

@@ -137,8 +137,7 @@ onMounted(async () => {
         selectedPhone.value &&
         (selectedPhone.value.number === data.from || selectedPhone.value.number === data.to)
       ) {
-        // whatsappMessages.value.push(data);
-        fetchMessages()
+        whatsappMessages.value.push(data);
         whatsappMessages.value.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
         nextTick(scrollToBottom);
       } else {

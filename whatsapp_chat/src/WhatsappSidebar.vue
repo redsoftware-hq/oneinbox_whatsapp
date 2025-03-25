@@ -174,7 +174,7 @@ export default {
   }
 });
         props.socket.on("whatsapp_contact_update", (data) => {
-          resetMessageCount(data.phone)
+          // resetMessageCount(data.phone)
           const existingIndex = contacts.value.findIndex((c) => c.phone === data.phone);
 
           if (!data.changed_fields || data.changed_fields.length === 0) {

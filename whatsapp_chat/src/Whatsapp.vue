@@ -190,14 +190,14 @@ $socket.onAny((event, data) => {
   emitter.on('lead_submission_process_completed', ()=>{isLoading.value = false,window.location.reload()});
   // emitter.on("reply_mode",(data)=>alert(JSON.stringify(data)))
   // emitter.on("message_sent",(data)=>{whatsappMessages.value.push(data);fetchMessages()})
-  // emitter.on('contact-selected', (data) => {
-  //   if (!selectedPhone.value || selectedPhone.value.number !== data.number) {
-  //     resetMessageCount(data.number)
-  //     selectedPhone.value = data;
-  //     fetchMessages();
-  //   }
+  emitter.on('contact-selected', (data) => {
+    if (!selectedPhone.value || selectedPhone.value.number !== data.number) {
+      resetMessageCount(data.number)
+      selectedPhone.value = data;
+      fetchMessages();
+    }
     
-  // });
+  });
 });
 
 const scrollToBottom = () => {

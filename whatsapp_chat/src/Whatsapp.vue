@@ -137,7 +137,8 @@ onMounted(async () => {
         selectedPhone.value &&
         (selectedPhone.value.number === data.from || selectedPhone.value.number === data.to)
       ) {
-        whatsappMessages.value.push(data);
+        // whatsappMessages.value.push(data);
+        fetchMessages()
         whatsappMessages.value.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
         nextTick(scrollToBottom);
       } else {
@@ -194,7 +195,6 @@ $socket.onAny((event, data) => {
     if (!selectedPhone.value || selectedPhone.value.number !== data.number) {
       resetMessageCount(data.number)
       selectedPhone.value = data;
-      fetchMessages();
     }
     
   });

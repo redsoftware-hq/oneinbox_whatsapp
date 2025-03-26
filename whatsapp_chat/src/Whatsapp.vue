@@ -132,12 +132,13 @@ onMounted(async () => {
   fetchContacts();
 
   if ($socket) {
-    $socket.on('oneinbox_whatsapp_message', (data) => {
+    $socket.on('oneinbox_whatsapp_message', async (data) => {
       if (
         selectedPhone.value &&
         (selectedPhone.value.number === data.from || selectedPhone.value.number === data.to)
       ) {
-        whatsappMessages.value.push(data);
+        // whatsappMessages.value.push(data);
+        await fetchMessages()
         whatsappMessages.value.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
         nextTick(scrollToBottom);
       } else {
@@ -264,11 +265,17 @@ onBeforeUnmount(() => {
         </div>
 
         <div v-else class="messages-container flex-1 p-4 overflow-y-auto bg-gray-200">
-          <WhatsAppArea class="px-3 sm:px-10" :messages="whatsappMessages"  v-bind:reply="reply" />
+          <WhatsAppArea class="px-3 sm:px-10" 
+              :messages="whatsappMessages"  
+              v-model:reply="reply" />
         </div>
 
         <div class="chat-box-container border-t-gray-200 mb-16">
-          <WhatsAppBox v-if="selectedPhone" :doctype="props.doctype" :docname="props.docname"  v-bind:reply="reply" :phone="selectedPhone?.number" @message-sent="fetchMessages" />
+          <WhatsAppBox v-if="selectedPhone" 
+                        :doctype="props.doctype" :docname="props.docname"  
+                        v-model:reply="reply" 
+                        :phone="selectedPhone?.number" 
+                        @message-sent="fetchMessages" />
         </div>
 
         <WhatsappTemplateSelectorModal v-model="showWhatsappTemplates" :doctype="doctype" @send="(t) => sendTemplate(t)"/>

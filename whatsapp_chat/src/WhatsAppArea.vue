@@ -60,7 +60,7 @@
             </Dropdown>
           </div>
           <div
-            class="absolute -bottom-5 flex gap-1 rounded-full border bg-white p-1 pb-[3px] shadow-sm"
+            class=" -bottom-5 flex gap-1 rounded-full border bg-white p-1 pb-[3px] shadow-sm"
             v-if="whatsapp.reaction"
           >
             <div class="flex size-4 items-center justify-center">
@@ -225,7 +225,6 @@ function messageOptions(message) {
       label: 'Reply',
       onClick: () => {
         replyMode.value = true
-        emitter.emit("reply_mode",message)
         reply.value = {
           ...message,
           message: formatWhatsAppMessage(message.message)

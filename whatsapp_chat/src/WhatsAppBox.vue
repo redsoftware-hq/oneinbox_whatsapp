@@ -20,7 +20,7 @@
   </div>
   <div class="flex items-end gap-2 px-3 py-2.5 sm:px-10 bg-gray-200" v-bind="$attrs">
     <div class="flex h-8 items-center gap-2">
-      <FileUploader @success="(file) => uploadFile(file)">
+      <FileUploader @success="(file) => uploadFile(file)" :accept="fileType.value">
         <template v-slot="{ openFileSelector }">
           <div class="flex items-center space-x-2">
             <Dropdown :options="uploadOptions(openFileSelector)">
@@ -65,16 +65,11 @@
 <script setup>
 import IconPicker from './components/IconPicker.vue'
 import SmileIcon from './components/Icons/SmileIcon.vue'
-// import {createResource} from '@frappe-ui/resources/index.js'
 import { createResource, Textarea, FileUploader, Dropdown } from 'frappe-ui'
 import { ref, nextTick, watch, defineModel, onMounted } from 'vue'
 import { emitter } from './utils/eventBus';
+
 const csrfToken = window.csrf_token || window.frappe.csrf_token || frappe.csrf_token;
-
-
-
-// Define the translation function
-// const __ = (text) => text;
 
 const props = defineProps({
   doctype: String,
@@ -88,7 +83,6 @@ const reply = defineModel('reply')
 const rows = ref(1)
 const textareaRef = ref(null)
 const emoji = ref('')
-
 const content = ref('')
 const placeholder = ref(__('Type your message here.....'))
 const fileType = ref('')
@@ -111,7 +105,6 @@ function sendTextMessage(event) {
 }
 
 async function sendWhatsAppMessage() {
- 
   let args = {
     message: content.value,
     to: props.phone || doc.value.contact_number.replace(/\D/g, ""),
@@ -136,11 +129,9 @@ async function sendWhatsAppMessage() {
       'X-Frappe-CSRF-Token': csrfToken
     }
   });
-  
-  emitter.emit("message_sent",args)
 
+  emitter.emit("message_sent", args);
 }
-
 
 function uploadOptions(openFileSelector) {
   return [
@@ -173,7 +164,7 @@ function uploadOptions(openFileSelector) {
 
 onMounted(() => {
   console.log("Initial reply:", reply.value);
-}); 
+});
 
 watch(reply, (value) => {
   if (value?.message) {

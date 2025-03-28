@@ -18,9 +18,9 @@
 
     <Button variant="ghost" icon="x" @click="reply = {}" />
   </div>
-  <div class="flex items-end gap-2 px-3 py-2.5 sm:px-10" v-bind="$attrs">
+  <div class="flex items-end gap-2 px-3 py-2.5 sm:px-10 bg-gray-200" v-bind="$attrs">
     <div class="flex h-8 items-center gap-2">
-      <FileUploader @success="(file) => uploadFile(file)">
+      <FileUploader @success="(file) => uploadFile(file)" :accept="fileType.value">
         <template v-slot="{ openFileSelector }">
           <div class="flex items-center space-x-2">
             <Dropdown :options="uploadOptions(openFileSelector)">
@@ -65,13 +65,11 @@
 <script setup>
 import IconPicker from './components/IconPicker.vue'
 import SmileIcon from './components/Icons/SmileIcon.vue'
-// import {createResource} from '@frappe-ui/resources/index.js'
 import { createResource, Textarea, FileUploader, Dropdown } from 'frappe-ui'
-import { ref, nextTick, watch, defineModel } from 'vue'
-// import { defineModel } from 'vue';
+import { ref, nextTick, watch, defineModel, onMounted } from 'vue'
+import { emitter } from './utils/eventBus';
 
-// Define the translation function
-// const __ = (text) => text;
+const csrfToken = window.csrf_token || window.frappe.csrf_token || frappe.csrf_token;
 
 const props = defineProps({
   doctype: String,
@@ -85,9 +83,8 @@ const reply = defineModel('reply')
 const rows = ref(1)
 const textareaRef = ref(null)
 const emoji = ref('')
-
 const content = ref('')
-const placeholder = ref(__('Type your message here...'))
+const placeholder = ref(__('Type your message here.....'))
 const fileType = ref('')
 
 function show() {
@@ -108,8 +105,6 @@ function sendTextMessage(event) {
 }
 
 async function sendWhatsAppMessage() {
-  console.log("PROP PHONE value check", content.value, "--------------------");
-
   let args = {
     message: content.value,
     to: props.phone || doc.value.contact_number.replace(/\D/g, ""),
@@ -118,7 +113,6 @@ async function sendWhatsAppMessage() {
     content_type: whatsapp?.value?.content_type,
   };
 
-  // Fix: Ensure variables exist before assignment
   if (content) content.value = '';
   if (fileType) fileType.value = '';
   if (whatsapp.value) {
@@ -132,11 +126,12 @@ async function sendWhatsAppMessage() {
     params: args,
     auto: true,
     headers: {
-      'X-Frappe-CSRF-Token': window.frappe.csrf_token || frappe.csrf_token || window.csrf_token,
+      'X-Frappe-CSRF-Token': csrfToken
     }
   });
-}
 
+  emitter.emit("message_sent", args);
+}
 
 function uploadOptions(openFileSelector) {
   return [
@@ -167,8 +162,13 @@ function uploadOptions(openFileSelector) {
   ]
 }
 
+onMounted(() => {
+  console.log("Initial reply:", reply.value);
+});
+
 watch(reply, (value) => {
   if (value?.message) {
+    console.log(reply)
     show()
   }
 })

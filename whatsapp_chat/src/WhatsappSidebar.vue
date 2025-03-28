@@ -1,9 +1,11 @@
 <template>
-  <div class="h-4/5 w-100 bg-white flex flex-col border-r border-gray-100">
+  <div class="h-full w-100 bg-white flex flex-col border-r border-gray-100">
+    <!-- Header -->
     <div class="p-4 flex justify-between items-center border-b bg-gray-100">
       <h2 class="text-lg font-semibold text-gray-700">Contacts</h2>
     </div>
 
+    <!-- Search Bar -->
     <div class="p-2 bg-gray-100">
       <input
         v-model="search"
@@ -13,41 +15,74 @@
       />
     </div>
 
-    <div class="flex-1 overflow-y-auto bg-gray-100">
-      <ul v-if="filteredContacts?.length">
+    <div
+      ref="scrollContainer"
+      class="flex-1 overflow-y-auto min-h-0"
+      @scroll="handleScroll"
+    >
+      <ul v-if="contacts.length">
         <li
-          v-for="contact in filteredContacts"
+          v-for="contact in contacts"
           :key="contact.phone"
           class="flex items-center justify-between p-4 cursor-pointer transition duration-200 hover:bg-gray-100 border-b border-gray-300 bg-white w-full"
-          :class="{ 'bg-blue-100': selectedContact === contact.phone }"
+          :class="{ 
+  'after_select': selectedContact === contact.phone, 
+}"
+
           @click="selectContact(contact)"
         >
-          <div class="flex flex-col space-y-2 w-full">
+          <div class="flex flex-col w-full h-full">
             <div class="flex justify-between w-full">
-              <div class="text-lg font-medium text-gray-800">{{ contact.phone }}</div>
-              <Badge v-if="contact.unread_message_count > 0" variant="solid" theme="green" size="sm">
+              <div class="text-lg font-medium text-gray-800">
+                {{ contact.phone }}
+              </div>
+              <Badge
+                v-if="contact.unread_message_count > 0"
+                variant="solid"
+                theme="green"
+                size="sm"
+              >
                 {{ contact.unread_message_count }}
               </Badge>
             </div>
 
             <div class="flex justify-between w-full">
-              <div class="text-sm font-medium text-gray-800">{{ contact.whatsapp_name || "Unknown" }}</div>
-              <div class="text-sm font-medium text-gray-400">{{ formatDate(contact.last_message_time) }}</div>
+              <div class="text-sm font-medium text-gray-800">
+                {{ contact.whatsapp_name || "Unknown" }}
+              </div>
+              <div class="text-sm font-medium text-gray-400">
+                {{ formatDate(contact.last_message_time) }}
+              </div>
             </div>
           </div>
         </li>
       </ul>
 
-      <div v-else class="text-gray-500 text-center p-4">No contacts found</div>
+      <!-- No Contacts Found -->
+      <div v-else class="text-gray-500 text-center p-4">
+        No contacts found
+      </div>
+
+      <!-- Loading Indicator -->
+      <div v-if="loadingMore" class="text-center p-2 text-gray-500">
+        Loading more contacts...
+      </div>
     </div>
   </div>
 </template>
-
+<style>
+.after_select{
+  background-color:rgb(243, 244, 246) !important;
+  color: white !important;
+}
+</style>
 <script>
 import { Badge } from "frappe-ui";
 import { format, isToday, isYesterday } from "date-fns";
 import { emitter } from "./utils/eventBus.js";
-import { ref, computed, watch, onMounted } from "vue"; // ✅ Added missing import
+import { ref, watch, onMounted } from "vue";
+const csrfToken = window.csrf_token || window.frappe?.csrf_token || window.frappe?.csrf_token;
+
 
 export default {
   name: "WhatsappSidebar",
@@ -55,63 +90,114 @@ export default {
   props: {
     user_update: Boolean,
     socket: Object,
-    contacts: Array,
+    csrfToken: String,
+    messagecount:Number
   },
 
   setup(props) {
     const search = ref("");
     const selectedContact = ref(null);
-    const contacts = ref(props.contacts || []);
+    const contacts = ref([]);
+    const scrollContainer = ref(null);
+    const loadingMore = ref(false);
+    let page = 0;
+    const pageSize = 20;
+    let debounceTimer = null;
 
-    const resetMessageCount = async (phone) => {
-      if (!phone) return;
+    const fetchContacts = async (searchTerm = "") => {
+      if (loadingMore.value) return;
+      loadingMore.value = true;
       try {
-        await fetch("/api/method/frappe_whatsapp.api.whatsapp.reset_unread_count", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "X-Frappe-CSRF-Token": window.frappe.csrf_token,
-          },
-          body: JSON.stringify({ phone }),
-        });
+        const response = await fetch(
+          `/api/method/frappe_whatsapp.api.whatsapp.get_whatsapp_contact?start=${page * pageSize}&page_length=${pageSize}&search_term=${encodeURIComponent(searchTerm)}`,
+          {
+            headers: { "X-Frappe-CSRF-Token": csrfToken },
+          }
+        );
+        const data = await response.json();
+        if (page === 0) {
+          contacts.value = data.message || []; // Replace contacts on new search
+        } else {
+          contacts.value = [...contacts.value, ...(data.message || [])]; // Append contacts on scroll
+        }
+        page++;
       } catch (error) {
-        console.error("Error resetting message count:", error);
+        console.error("Error fetching contacts:", error);
+      } finally {
+        loadingMore.value = false;
       }
     };
 
-    const filteredContacts = computed(() => {
-      if (!search.value) return contacts.value;
-      return contacts.value.filter(
-        (contact) =>
-          contact.phone.includes(search.value) ||
-          (contact.whatsapp_name || "").toLowerCase().includes(search.value.toLowerCase())
-      );
+    const handleScroll = () => {
+      if (debounceTimer) clearTimeout(debounceTimer);
+
+      debounceTimer = setTimeout(() => {
+        if (!scrollContainer.value || loadingMore.value) return;
+        const { scrollTop, scrollHeight, clientHeight } = scrollContainer.value;
+        if (scrollTop + clientHeight >= scrollHeight - 10) {
+          fetchContacts(search.value);
+        }
+      }, 300);
+    };
+
+    watch(search, (newSearch) => {
+      page = 0;
+      contacts.value = []; // Clear current contacts
+      fetchContacts(newSearch); // Fetch new results based on search term
     });
 
     const selectContact = (contact) => {
       selectedContact.value = contact.phone;
-      resetMessageCount(selectedContact.value);
-
+      props.messagecount=contact.unread_message_count
       emitter.emit("contact-selected", {
         number: contact.phone,
         name: contact.whatsapp_name,
-      });
+        unread_message_count:contact.unread_message_count
 
+      });
       localStorage.setItem("selectedContact", JSON.stringify(contact));
       emitter.emit("contact-selected-refresh");
     };
 
-    // Watch for prop updates
-    watch(() => props.contacts, (newContacts) => {
-      contacts.value = newContacts;
-    });
-
-    // Real-time updates from socket
-    if (props.socket) {
-      props.socket.on("contacts_updated", (newContacts) => {
-        contacts.value = newContacts;
-      });
+    onMounted(() => {
+      fetchContacts();
+      if (props.socket) {
+        props.socket.on('oneinbox_whatsapp_message', (data) => {
+      if(selectedContact.value !== data.from ) {
+        const index = contacts.value.findIndex(contact => contact.phone === data.from);
+      if (index !== -1) {
+      const contact = contacts.value[index];
+      contact.unread_message_count = (contact.unread_message_count || 0) + 1;
+      contacts.value.splice(index, 1);
+      contacts.value.unshift(contact);
     }
+  }
+});
+        props.socket.on("whatsapp_contact_update", (data) => {
+          // resetMessageCount(data.phone)
+          const existingIndex = contacts.value.findIndex((c) => c.phone === data.phone);
+
+          if (!data.changed_fields || data.changed_fields.length === 0) {
+            return;
+          }
+
+          if (existingIndex !== -1) {
+            if(data.changed_fields.includes("unread_message_count")&&data.phone===selectedContact.value)
+            data = { ...data, unread_message_count: 0 };
+            const existingContact = contacts.value[existingIndex];
+            contacts.value.splice(existingIndex, 1);
+            contacts.value.unshift({ ...existingContact, ...data });
+            
+          } 
+          
+          else {
+            contacts.value.unshift(data);
+          }
+
+          contacts.value = [...contacts.value];
+        });
+      }
+    });
 
     const formatDate = (dateString) => {
       if (!dateString) return "";
@@ -119,7 +205,6 @@ export default {
       let formattedTime = "";
       const currentYear = new Date().getFullYear();
       const messageYear = lastInteraction.getFullYear();
-
       if (isToday(lastInteraction)) {
         formattedTime = format(lastInteraction, "hh:mm a");
       } else if (isYesterday(lastInteraction)) {
@@ -131,24 +216,32 @@ export default {
       }
       return formattedTime;
     };
-
-    // onMounted(async () => {
-    //   if (props.socket) { // ✅ Fixed the incorrect `$socket` reference
-    //     props.socket.on("whatsapp_contact_update", async (data) => {
-
-    //       if (selectedContact.value && selectedContact.value === data.phone) {
-    //         resetMessageCount(selectedContact.value);
-    //       }
-    //     });
-    //   }
-    // });
+      
+    const resetMessageCount = async (phone) => {
+      if (!phone) return;
+      try {
+        await fetch("/api/method/frappe_whatsapp.api.whatsapp.reset_unread_count", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Frappe-CSRF-Token": csrfToken,
+          },
+          body: JSON.stringify({ phone }),
+        });
+      } catch (error) {
+        console.error("Error resetting message count:", error);
+      }
+    };
 
     return {
       search,
       selectedContact,
-      filteredContacts,
+      contacts,
       selectContact,
       formatDate,
+      scrollContainer,
+      handleScroll,
+      loadingMore,
     };
   },
 };

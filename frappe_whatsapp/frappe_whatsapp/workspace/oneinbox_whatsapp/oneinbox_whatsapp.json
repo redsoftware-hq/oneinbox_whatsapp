@@ -1,0 +1,63 @@
+{
+ "charts": [
+  {
+   "chart_name": "Lead Conversion Stats",
+   "label": "Lead Conversion From WhatsApp Stat"
+  },
+  {
+   "chart_name": "Unique Number Contacted",
+   "label": "Unique Number Contacted"
+  }
+ ],
+ "content": "[{\"id\":\"Sp7H5grlzW\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Oneinbox whatsapp</span>\",\"col\":12}},{\"id\":\"Z-Lzfo4r7T\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"qpexkiiGCf\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"OneinboxWhatsapp\",\"col\":12}},{\"id\":\"xxyVruPHvz\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"ISyyIpz4lT\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Number Of Unique Contact\",\"col\":4}},{\"id\":\"sFsXVenDE2\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Total WhatsApp Contact\",\"col\":4}},{\"id\":\"J2z56GeYmq\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Total Converted Leads\",\"col\":4}},{\"id\":\"hTPqX_RwnD\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Total Unread Message Count\",\"col\":4}},{\"id\":\"bnNyOI7IFZ\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"h-XC_9_NJj\",\"type\":\"chart\",\"data\":{\"chart_name\":\"Lead Conversion From WhatsApp Stat\",\"col\":12}},{\"id\":\"NL9y1yNW3-\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"vz4R10KaaU\",\"type\":\"chart\",\"data\":{\"chart_name\":\"Unique Number Contacted\",\"col\":12}}]",
+ "creation": "2025-02-28 13:04:10.377062",
+ "custom_blocks": [],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "for_user": "",
+ "hide_custom": 0,
+ "icon": "comment",
+ "idx": 0,
+ "indicator_color": "",
+ "is_hidden": 0,
+ "label": "Oneinbox whatsapp",
+ "links": [],
+ "modified": "2025-03-21 11:01:15.096111",
+ "modified_by": "Administrator",
+ "module": "Frappe Whatsapp",
+ "name": "Oneinbox whatsapp",
+ "number_cards": [
+  {
+   "label": "Number Of Unique Contact",
+   "number_card_name": "Number Of Unique Contact"
+  },
+  {
+   "label": "Total Unread Message Count",
+   "number_card_name": "Total Unread Message Count"
+  },
+  {
+   "label": "Total WhatsApp Contact",
+   "number_card_name": "Total WhatsApp Contact"
+  },
+  {
+   "label": "Total Converted Leads",
+   "number_card_name": "Total Converted Leads"
+  }
+ ],
+ "owner": "Administrator",
+ "parent_page": "",
+ "public": 1,
+ "quick_lists": [],
+ "roles": [],
+ "sequence_id": 29.0,
+ "shortcuts": [
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "OneinboxWhatsapp",
+   "type": "URL",
+   "url": "/whatsapp_chat"
+  }
+ ],
+ "title": "Oneinbox whatsapp"
+}

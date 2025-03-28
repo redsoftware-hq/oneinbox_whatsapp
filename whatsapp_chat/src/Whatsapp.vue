@@ -12,7 +12,7 @@ import { emitter } from './utils/eventBus';
 
 const app = getCurrentInstance();
 const { $socket } = app.appContext.config.globalProperties;
-const csrfToken = window.frappe ? window.frappe.csrf_token : '';
+const csrfToken = window.csrf_token || window.frappe.csrf_token || frappe.csrf_token;
 
 const props = defineProps({
   doctype: String,
@@ -33,6 +33,14 @@ const isLoading = ref(false);
 const whatsappMessages = ref([]);
 const user_update = ref(false);
 const isMappingSet = ref(false);
+const messagecount=ref(null)
+const reply = ref({});
+
+const whatsapp = ref({
+  attach: '',
+  content_type: 'text',
+});
+
 
 const fetchContacts = async () => {
   try {
@@ -52,7 +60,7 @@ const resetMessageCount = async (phone) => {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "X-Frappe-CSRF-Token": window.frappe.csrf_token,
+            "X-Frappe-CSRF-Token": csrfToken,
           },
           body: JSON.stringify({ phone }),
         });
@@ -62,7 +70,6 @@ const resetMessageCount = async (phone) => {
     };
 
 
-// ✅ Fetch messages in real-time
 const fetchMessages = async () => {
   if (!selectedPhone.value) return;
   
@@ -72,12 +79,16 @@ const fetchMessages = async () => {
        params: { phone: selectedPhone.value.number },
        auto: false,
        headers: {
-        'X-Frappe-CSRF-Token': frappe.csrf_token
+        'X-Frappe-CSRF-Token': csrfToken
       }
      }).fetch();
  
      whatsappMessages.value = response.sort((a, b) => new Date(a.creation) - new Date(b.creation));
-     resetMessageCount(selectedPhone.value.number);
+     
+     
+     if(selectedPhone?.value?.unread_message_count>0)
+      resetMessageCount(selectedPhone.value.number);
+    
      scrollToBottom();
    } catch (error) {
      console.error("Error fetching messages:", error);
@@ -94,7 +105,7 @@ async function sendTemplate(template) {
       },
       auto: true,
       headers: {
-        'X-Frappe-CSRF-Token': frappe.csrf_token
+        'X-Frappe-CSRF-Token': csrfToken
       }
     }).fetch()
 
@@ -112,7 +123,7 @@ onMounted(async () => {
     const response = await fetch('/api/method/frappe_whatsapp.api.whatsapp.is_mapping_set', {
       method: 'GET',
       headers: {
-        'X-Frappe-CSRF-Token': window.frappe ? window.frappe.csrf_token : '',
+        'X-Frappe-CSRF-Token': csrfToken,
         'Content-Type': 'application/json',
       },
     });
@@ -125,31 +136,51 @@ onMounted(async () => {
   fetchContacts();
 
   if ($socket) {
-    $socket.on('oneinbox_whatsapp_message', (data) => {
-      if (selectedPhone.value && selectedPhone.value.number === data.from) {
-        whatsappMessages.value.push(data);
+    $socket.on('oneinbox_whatsapp_message', async (data) => {
+      if (
+        selectedPhone.value &&
+        (selectedPhone.value.number === data.from || selectedPhone.value.number === data.to)
+      ) {
+        // whatsappMessages.value.push(data);
+        await fetchMessages()
         whatsappMessages.value.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
         nextTick(scrollToBottom);
-      }
-    });
+      } else {
+        const index = contacts.value.findIndex(contact => contact.phone === data.from);
+    // if (index !== -1) {
+    //   const contact = contacts.value[index];
+    //   contacts.value.splice(index, 1);
+    //   contacts.value.unshift(contact);
+    //   contacts.value = [contact, ...contacts.value];
+    // }
+  }
+});
 
-    $socket.on('whatsapp_contact_update', async (data) => {
-    await fetchContacts();
 
-    if (selectedPhone.value && selectedPhone.value.number === data.phone) {
+//     $socket.on('whatsapp_contact_update', async (data) => {
+//     await fetchContacts();
+
+//     if (selectedPhone.value && selectedPhone.value.number === data.phone) {
       
-        return;
-    }
+//         return;
+//     }
     
 
-    const index = contacts.value.findIndex(contact => contact.phone === data.phone);
+//     const existingIndex = contacts.value.findIndex((c) => c.phone === data.phone);
+//         if (existingIndex !== -1) {
+//           const [existingContact] = contacts.value.splice(existingIndex, 1);
+//         contacts.value.unshift({ ...existingContact, ...data });
+//         } else {
+//           contacts.value.unshift(data);
+//         }
 
-    if (index !== -1) {
-        contacts.value.splice(index, 1, { ...contacts.value[index], ...data });
-    } else {
-        contacts.value.push(data);
-    }
-});
+//         contacts.value = [...contacts.value];
+
+//         // if (selectedContact.value && selectedContact.value === data.phone) {
+          
+//         //   resetMessageCount(selectedContact.value);
+//         // }
+// });
 
 
 $socket.onAny((event, data) => {
@@ -162,15 +193,18 @@ $socket.onAny((event, data) => {
   emitter.on('lead_submission_process_error', ()=>isLoading.value = false);
 
   emitter.on('lead_submission_process_completed', ()=>{isLoading.value = false,window.location.reload()});
+  // emitter.on("reply_mode",(data)=>alert(JSON.stringify(data)))
+  // emitter.on("message_sent",(data)=>{whatsappMessages.value.push(data);fetchMessages()})
   emitter.on('contact-selected', (data) => {
     if (!selectedPhone.value || selectedPhone.value.number !== data.number) {
+      resetMessageCount(data.number)
       selectedPhone.value = data;
-      fetchMessages(); // ✅ Fetch messages immediately on selection
+      fetchMessages();
     }
+    
   });
 });
 
-// ✅ Ensure smooth scrolling on new messages
 const scrollToBottom = () => {
   nextTick(() => {
     const el = document.querySelector('.messages-container');
@@ -178,7 +212,6 @@ const scrollToBottom = () => {
   });
 };
 
-// ✅ Cleanup WebSocket listeners
 onBeforeUnmount(() => {
   if ($socket) {
     $socket.off('oneinbox_whatsapp_message');
@@ -190,7 +223,7 @@ onBeforeUnmount(() => {
 
 
 <template>
-  <div class="flex h-4/5 flex-col scroll " :class="{ 'splash-screen': isLoading }">
+  <div class="flex h-4/5 flex-col scroll  " :class="{ 'splash-screen': isLoading }">
     <div class="top-bar flex p-3 bg-white">
       <div class="flex column  w-full">
         <div class="flex column gap-5 w-full">
@@ -200,17 +233,15 @@ onBeforeUnmount(() => {
           <h1>Whatsapp</h1>
         </div>
       </div>
-      <h1 class="w-full text-red-500" v-if="!isMappingSet">
-  Lead Mapping is Not Configured Yet
-</h1>
+
 
 
       </div>
     </div>
 
     <div class="flex h-screen overflow-hidden">
-      <div class="w-1/5">
-        <WhatsappSidebar :contacts="contacts" :user_update="user_update" :socket="$socket" />
+      <div class="w-1/5 h-screen">
+        <WhatsappSidebar :contacts="contacts" :user_update="user_update" :socket="$socket" :messagecount="messagecount" />
       </div>
 
       <div class="whatsapp-chat-container h-screen w-full flex-col">
@@ -220,26 +251,37 @@ onBeforeUnmount(() => {
             <h2 class="text-sm font-semibold text-gray-800">{{ selectedPhone?.name || '' }}</h2>
           </div>
           <div class="flex items-center space-x-4">
-            <Button @click="showAddLeadModal = true" class="bg-gray-700 text-black" :showAddLeadModal="showAddLeadModal" :disabled="!isMappingSet" >+ Add Lead</Button>
+            <Button @click="showAddLeadModal = true" class="bg-gray-700 text-black" 
+              :showAddLeadModal="showAddLeadModal" 
+              :disabled="!isMappingSet"  
+              :title="!isMappingSet ? 'Please Configure Lead mapping before adding a lead' : ''">+ Add Lead</Button>
             <Button @click="showWhatsappTemplates = true" :disabled="!isMappingSet">Send Template</Button>
           </div>
         </div>
 
-        <div v-if="!selectedPhone" class="flex flex-1 flex-col items-center justify-center gap-3 text-xl font-medium text-gray-500">
+        <div v-if="!selectedPhone" class="flex flex-1 flex-col items-center justify-center gap-3 text-xl font-medium text-gray-500 bg-gray-200">
           <span>Click Any Contact To View Conversation</span>
         </div>
 
-        <div v-else-if="selectedPhone && whatsappMessages.length === 0" class="flex flex-1 flex-col items-center justify-center gap-3 text-xl font-medium text-gray-500">
+        <div v-else-if="selectedPhone && whatsappMessages.length === 0" class="flex flex-1 flex-col items-center justify-center gap-3 text-xl font-medium text-gray-500 bg-gray-200">
           <WhatsAppIcon class="h-10 w-10 text-gray-500" />
           <span>No messages yet</span>
         </div>
 
-        <div v-else class="messages-container flex-1 p-4 overflow-y-auto">
-          <WhatsAppArea class="px-3 sm:px-10" :messages="whatsappMessages" />
+        <div v-else class="messages-container flex-1 p-4 overflow-y-auto bg-gray-200">
+          <WhatsAppArea class="px-3 sm:px-10" 
+              :messages="whatsappMessages"  
+              v-model:reply="reply" />
         </div>
 
-        <div class="chat-box-container border-t-gray-100 mb-16">
-          <WhatsAppBox v-if="selectedPhone" :doctype="props.doctype" :docname="props.docname" :phone="selectedPhone?.number" @message-sent="fetchMessages" />
+        <div class="chat-box-container border-t-gray-200 mb-16">
+          <WhatsAppBox v-if="selectedPhone" 
+                        :doctype="props.doctype" :docname="props.docname"  
+                        v-model:reply="reply" 
+                        :phone="selectedPhone?.number" 
+                        @message-sent="fetchMessages"
+                        v-model:whatsapp="whatsapp"
+                        />
         </div>
 
         <WhatsappTemplateSelectorModal v-model="showWhatsappTemplates" :doctype="doctype" @send="(t) => sendTemplate(t)"/>

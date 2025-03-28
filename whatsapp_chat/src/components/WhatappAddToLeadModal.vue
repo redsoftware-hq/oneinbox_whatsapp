@@ -19,7 +19,7 @@
         />
       </div>
       <div class="mt-4 flex justify-end text-black">
-        <button class="mr-2 px-4 py-2 bg-gray-300 rounded" type="button" @click="closeDialog">Cancel</button>
+        <button class="mr-2 px-4 py-2 bg-gray-300 rounded" type="button" @click="cancelClicked">Cancel</button>
         <button class="px-4 py-2 bg-gray-700 text-white rounded" type="button" @click="submitLead">Save Lead</button>
       </div>
     </template>
@@ -39,18 +39,18 @@ const props = defineProps({
 });
 
 const show = ref(props.showAddLeadModal);
-// const csrfToken = ref(window.frappe.csrf_token || "");
+const csrfToken = window.csrf_token || window.frappe?.csrf_token
 
 const fieldMappingsResource = createResource({
   url: "/api/method/frappe_whatsapp.api.whatsapp.get_leadmapping_fields",
   auto: true,
-  // headers: { "X-Frappe-CSRF-Token": csrfToken.value },
+  headers: { "X-Frappe-CSRF-Token": csrfToken },
 });
 
 const formDataResource = createResource({
   url: "/api/method/frappe_whatsapp.api.whatsapp.get_form_data",
   auto: true,
-  // headers: { "X-Frappe-CSRF-Token": csrfToken.value },
+  headers: { "X-Frappe-CSRF-Token": csrfToken},
 });
 
 const dynamicFields = ref([]);
@@ -121,7 +121,7 @@ const submitLead = async () => {
       headers: {
         'Accept': 'application/json',
         'Content-Type': 'application/json',
-        // 'X-Frappe-CSRF-Token': csrfToken.value
+         "X-Frappe-CSRF-Token": csrfToken,
       },
       method: "POST",
       body: JSON.stringify({ doctype: form_name.value, data: leadData }),
@@ -130,7 +130,7 @@ const submitLead = async () => {
     const result = await response.json();
     if (result.message.status === "success") {
       emitter.emit("lead_submission_process_completed", lead.value);
-    } else {
+    } else if (result.message.status === "error") {
       emitter.emit("lead_submission_process_error", lead.value);
       console.error("Error submitting lead:", result.message);
     }
@@ -138,5 +138,9 @@ const submitLead = async () => {
     console.error("Error submitting lead:", error);
   }
 };
+
+const cancelClicked=()=>{
+  emitter.emit("cancel_clicked")
+}
 
 </script>

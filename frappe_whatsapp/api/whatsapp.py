@@ -18,18 +18,10 @@ def is_whatsapp_installed():
 
 
 @frappe.whitelist()
-def get_whatsapp_messages(reference_doctype = None, reference_name = None, phone = None):
+def get_whatsapp_messages(phone = None):
     if not frappe.db.exists("DocType", "WhatsApp Message"):
         return []
     messages = []
-
-    filters = {}
-
-    if reference_doctype and reference_name:
-        filters = {
-            "reference_doctype": reference_doctype,
-            "reference_name": reference_name,
-        }
 
     or_filters = None
     if phone:
@@ -41,7 +33,6 @@ def get_whatsapp_messages(reference_doctype = None, reference_name = None, phone
 
     messages += frappe.get_all(
         "WhatsApp Message",
-        filters=filters,
         or_filters= or_filters if or_filters else None,
         fields=[
             "name",
@@ -121,7 +112,7 @@ def get_whatsapp_messages(reference_doctype = None, reference_name = None, phone
         message["from_name"] = from_name
     # Filter messages to get only replies
     reply_messages = [message for message in messages if message["is_reply"]]
-
+    
     # Iterate through reply messages
     for reply_message in reply_messages:
         # Find the message that this message is replying to
@@ -134,7 +125,6 @@ def get_whatsapp_messages(reference_doctype = None, reference_name = None, phone
             None,
         )
 
-        # If the replied message is found, add the reply details to the reply message
         from_name = (
             get_from_name(reply_message) if replied_message["from"] else _("You")
         )
@@ -170,11 +160,9 @@ def create_whatsapp_message(
                 "reply_to_message_id": reply_doc.message_id,
             }
         )
-
     doc.update(
         {
-            # "reference_doctype": reference_doctype,
-            # "reference_name": reference_name,
+
             "message": message or attach,
             "to": to,
             "attach": attach,
@@ -240,29 +228,33 @@ def get_from_name(message):
 
 
 @frappe.whitelist()
-def get_whatsapp_contact(start=0, page_length=20):
+def get_whatsapp_contact(start=0, page_length=20, search_term=None):
     start = int(start)
     page_length = int(page_length)
 
+    query = """
+        SELECT Distinct phone, whatsapp_name, unread_message_count, last_message_time, 
+               discard, is_lead, marketing_opt_in 
+        FROM `tabWhatsApp Contact`
+        WHERE is_lead = 0
+    """
 
-    whatsapp_contacts = frappe.get_all(
-        "WhatsApp Contact",
-        fields=[
-            "phone",
-            "whatsapp_name",
-            "unread_message_count",
-            "last_message_time",
-            "discard",
-            "is_lead",
-            "marketing_opt_in"
-        ],
-        filters={"is_lead": 0},
-        start=start,
-        page_length=page_length,
-        order_by="last_message_time desc"
-    )
+    query_params = []
+
+    if search_term:
+        query += " AND (phone LIKE %s OR whatsapp_name LIKE %s)"
+        search_pattern = f"%{search_term}%"
+        query_params.extend([search_pattern, search_pattern])
+
+    query += " ORDER BY last_message_time DESC LIMIT %s OFFSET %s"
+    query_params.extend([page_length, start])
+
+    whatsapp_contacts = frappe.db.sql(query, query_params, as_dict=True)
 
     return whatsapp_contacts
+
+
+
 
 
 @frappe.whitelist()
@@ -324,6 +316,15 @@ def save_as_lead(data, doctype):
         """
 
         frappe.db.sql(query, (doctype, doc.name, variation, variation))
+        
+        query = """
+            UPDATE `tabWhatsApp Message`
+            SET reference_doctype = %s, reference_name = %s
+            WHERE `from` LIKE %s OR `from` LIKE %s
+        
+        """
+
+        frappe.db.sql(query, (doctype, doc.name, variation, variation))
         frappe.db.commit()
 
         return {"status": "success", "message": "Lead saved and contact updated"}
@@ -380,7 +381,6 @@ def reset_unread_count(phone):
             filters={"phone": phone},
             fields=["name"]
         )
-
         if user_doc:
             user_doc = frappe.get_doc("WhatsApp Contact", user_doc[0]["name"])
             user_doc.unread_message_count = 0
@@ -424,25 +424,37 @@ def send_message_event(doc, method=None):
 
 
 
+import frappe
+
 def emit_user_update_event(doc, method=None):
     try:
+        before_save = doc.get_doc_before_save()  # Get the previous state of the document
+        changed_fields = []
+
+        if before_save:
+            for field in ["phone", "last_message_time", "whatsapp_name", "unread_message_count", "is_lead", "discard", "marketing_opt_in"]:
+                if getattr(doc, field) != getattr(before_save, field):
+                    changed_fields.append(field) 
+                    
         user_update_event = {
-			"phone": doc.phone,
-			"last_message_time": doc.last_message_time,
-			"whatsapp_name": doc.whatsapp_name,
-			"unread_message_count": doc.unread_message_count,
-			"is_lead": doc.is_lead,
-			"discard": doc.discard,
-			"marketing_opt_in": doc.marketing_opt_in,
-			}
+            "phone": doc.phone,
+            "last_message_time": doc.last_message_time,
+            "whatsapp_name": doc.whatsapp_name,
+            "unread_message_count": doc.unread_message_count,
+            "is_lead": doc.is_lead,
+            "discard": doc.discard,
+            "marketing_opt_in": doc.marketing_opt_in,
+            "changed_fields": changed_fields  # Append changed fields list
+        }
 
         frappe.publish_realtime(
             "whatsapp_contact_update",
             user_update_event,
-        )    
+        ) 
+
     except Exception as e:
-        frappe.logger().error(f"Error Emitting User Update Event: {frappe.get_traceback()}")
-        frappe.log_error("Error Emitting User Update Event", frappe.get_traceback())
+        frappe.log_error(f"Error in emit_user_update_event: {str(e)}")
+
 
 @frappe.whitelist(allow_guest=True)     
 def is_mapping_set():

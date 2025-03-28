@@ -36,6 +36,10 @@ const isMappingSet = ref(false);
 const messagecount=ref(null)
 const reply = ref({});
 
+const whatsapp = ref({
+  attach: '',
+  content_type: 'text',
+});
 
 
 const fetchContacts = async () => {
@@ -275,7 +279,9 @@ onBeforeUnmount(() => {
                         :doctype="props.doctype" :docname="props.docname"  
                         v-model:reply="reply" 
                         :phone="selectedPhone?.number" 
-                        @message-sent="fetchMessages" />
+                        @message-sent="fetchMessages"
+                        v-model:whatsapp="whatsapp"
+                        />
         </div>
 
         <WhatsappTemplateSelectorModal v-model="showWhatsappTemplates" :doctype="doctype" @send="(t) => sendTemplate(t)"/>

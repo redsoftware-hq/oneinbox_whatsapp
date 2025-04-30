@@ -1,0 +1,18 @@
+{
+  "name": "frappe_whatsapp",
+  "version": "1.0.0",
+  "description": "Frappe Whatsapp",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "postinstall": "cd whatsapp_chat && yarn install",
+    "dev": "cd whatsapp_chat && yarn dev",
+    "build": "cd whatsapp_chat && yarn install && yarn build"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "frappe-ui": "^0.1.111"
+  }
+}
